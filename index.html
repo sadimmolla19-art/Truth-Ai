@@ -6,190 +6,214 @@
 <title>Truth-AI Pro • Next-Gen AI</title>
 <style>
   :root {
-    --bg: #050810;
-    --card: rgba(17, 24, 39, 0.85);
-    --border: rgba(55, 65, 81, 0.6);
-    --accent: #10b981;
-    --accent-glow: rgba(16, 185, 129, 0.3);
-    --blue: #3b82f6;
-    --text: #f3f4f6;
-    --muted: #9ca3af;
+    --bg: #050810; --card: rgba(17, 24, 39, 0.85); --border: rgba(55, 65, 81, 0.6);
+    --accent: #10b981; --accent-glow: rgba(16, 185, 129, 0.3); --text: #f3f4f6; --muted: #9ca3af;
   }
-  * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
-  body {
-    margin: 0; background: radial-gradient(circle at top right, #0f172a, #050810 60%);
-    color: var(--text); display: flex; flex-direction: column; min-height: 100vh;
-  }
-  header {
-    padding: 14px 20px; background: rgba(10, 15, 28, 0.9);
-    backdrop-filter: blur(12px); border-bottom: 1px solid var(--border);
-    display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100;
-  }
-  .logo {
-    font-size: 21px; font-weight: 800; letter-spacing: 0.5px;
-    background: linear-gradient(90deg, #10b981, #3b82f6);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  }
+  * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+  body { margin: 0; background: radial-gradient(circle at top right, #0f172a, #050810 60%); color: var(--text); display: flex; flex-direction: column; min-height: 100vh; }
+  header { padding: 14px 20px; background: rgba(10, 15, 28, 0.9); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+  .logo { font-size: 21px; font-weight: 800; background: linear-gradient(90deg, #10b981, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
   .badge { font-size: 11px; background: rgba(16,185,129,0.15); color: #10b981; padding: 3px 8px; border-radius: 20px; border: 1px solid rgba(16,185,129,0.3); }
-  .user-info { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text); }
+  .user-info { display: flex; align-items: center; gap: 10px; font-size: 13px; }
   .logout-btn { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.4); padding: 6px 12px; font-size: 12px; border-radius: 8px; cursor: pointer; }
-  
   main { flex: 1; max-width: 850px; width: 100%; margin: auto; padding: 15px; }
-  .card {
-    background: var(--card); backdrop-filter: blur(16px);
-    border: 1px solid var(--border); border-radius: 18px; padding: 22px;
-    box-shadow: 0 15px 35px rgba(0,0,0,0.5);
-  }
-  input, textarea, select {
-    width: 100%; padding: 13px 15px; margin: 8px 0 15px; background: #090d16;
-    color: white; border: 1px solid #374151; border-radius: 12px; font-size: 15px; outline: none; transition: 0.2s;
-  }
+  .card { background: var(--card); backdrop-filter: blur(16px); border: 1px solid var(--border); border-radius: 18px; padding: 22px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); }
+  input, textarea, select { width: 100%; padding: 13px 15px; margin: 8px 0 15px; background: #090d16; color: white; border: 1px solid #374151; border-radius: 12px; font-size: 15px; outline: none; }
   input:focus, textarea:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
-  button {
-    background: linear-gradient(135deg, #059669, #10b981); color: white; border: 0; padding: 12px 20px;
-    border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.2s;
-  }
-  button:hover { opacity: 0.92; transform: translateY(-1px); }
-  .btn-full { width: 100%; }
-  .btn-secondary { background: #1f2937; border: 1px solid #374151; }
-
+  button { background: linear-gradient(135deg, #059669, #10b981); color: white; border: 0; padding: 12px 20px; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; }
+  .btn-full { width: 100%; } .btn-secondary { background: #1f2937; border: 1px solid #374151; }
   nav { display: flex; gap: 8px; margin-bottom: 15px; background: var(--card); padding: 6px; border-radius: 14px; border: 1px solid var(--border); }
   nav button { flex: 1; background: transparent; color: var(--muted); padding: 10px; font-size: 14px; border-radius: 10px; }
-  nav button.active { background: linear-gradient(135deg, #059669, #10b981); color: white; box-shadow: 0 4px 12px var(--accent-glow); }
-
-  #messages {
-    height: 54vh; overflow-y: auto; background: #070b14; padding: 16px;
-    border-radius: 14px; border: 1px solid var(--border); display: flex; flex-direction: column; gap: 14px;
-  }
+  nav button.active { background: linear-gradient(135deg, #059669, #10b981); color: white; }
+  #messages { height: 54vh; overflow-y: auto; background: #070b14; padding: 16px; border-radius: 14px; border: 1px solid var(--border); display: flex; flex-direction: column; gap: 14px; }
   .msg { padding: 13px 16px; border-radius: 14px; max-width: 88%; line-height: 1.6; font-size: 15px; overflow-wrap: anywhere; white-space: pre-wrap; }
-  .user { background: linear-gradient(135deg, #059669, #10b981); align-self: flex-end; color: white; border-bottom-right-radius: 3px; }
-  .ai { background: #161f30; align-self: flex-start; border-left: 3px solid var(--accent); border-bottom-left-radius: 3px; }
-  .msg pre { background: #050810; padding: 12px; border-radius: 8px; overflow-x: auto; border: 1px solid #374151; font-family: monospace; font-size: 13px; margin: 8px 0; }
-  
+  .user { background: linear-gradient(135deg, #059669, #10b981); align-self: flex-end; color: white; }
+  .ai { background: #161f30; align-self: flex-start; border-left: 3px solid var(--accent); }
   .chat-input-box { display: flex; gap: 8px; margin-top: 12px; align-items: center; }
   .chat-input-box textarea { margin: 0; resize: none; height: 50px; }
   .chat-input-box button { height: 50px; padding: 0 22px; }
-
   #imageResult { text-align: center; }
-  #imageResult img { width: 100%; max-height: 450px; object-fit: contain; border-radius: 14px; margin-top: 15px; border: 1px solid var(--border); background: #050810; }
-  
-  .panel { display: none; }
-  .panel.active { display: block; }
-  .hidden { display: none !important; }
-  .small { font-size: 13px; color: var(--muted); }
-  .toggle-link { color: var(--accent); cursor: pointer; font-weight: 600; text-decoration: underline; }
+  #imageResult img { width: 100%; max-height: 450px; object-fit: contain; border-radius: 14px; margin-top: 15px; border: 1px solid var(--border); }
+  .panel { display: none; } .panel.active { display: block; } .hidden { display: none !important; }
+  .small { font-size: 13px; color: var(--muted); } .toggle-link { color: var(--accent); cursor: pointer; font-weight: 600; text-decoration: underline; }
   footer { text-align: center; color: #6b7280; padding: 16px; font-size: 12px; border-top: 1px solid rgba(31,41,55,0.4); margin-top: 20px; }
   footer strong { color: #10b981; }
 </style>
 </head>
 <body>
-
 <header>
-  <div style="display:flex; align-items:center; gap:8px;">
-    <div class="logo">✦ TRUTH-AI PRO</div>
-    <span class="badge">v2.0</span>
-  </div>
-  <div id="userHeader" class="user-info hidden">
-    <span id="displayUser">User</span>
-    <button class="logout-btn" onclick="logout()">Logout</button>
-  </div>
+  <div style="display:flex; align-items:center; gap:8px;"><div class="logo">✦ TRUTH-AI PRO</div><span class="badge">v2.0</span></div>
+  <div id="userHeader" class="user-info hidden"><span id="displayUser">User</span><button class="logout-btn" onclick="logout()">Logout</button></div>
 </header>
-
 <main>
   <section id="authSection" class="card" style="max-width: 420px; margin: 25px auto;">
     <h2 id="authTitle" style="margin-top:0;">🔐 Login to Truth-AI</h2>
     <p class="small">Next-Gen AI Workspace • Engineered by Sadim Molla</p>
-    
-    <label class="small">Username</label>
-    <input type="text" id="usernameInput" placeholder="Enter your username">
-    
-    <label class="small">Password</label>
-    <input type="password" id="passwordInput" placeholder="Enter your password">
-    
-    <label class="small" style="display:flex; align-items:center; gap:8px; margin-bottom:15px; cursor:pointer;">
-      <input type="checkbox" id="ageConfirm" style="width:auto; margin:0;" checked>
-      I confirm that I am 18 years or older.
-    </label>
-
+    <label class="small">Username</label><input type="text" id="usernameInput" placeholder="Enter your username">
+    <label class="small">Password</label><input type="password" id="passwordInput" placeholder="Enter your password">
+    <label class="small" style="display:flex; align-items:center; gap:8px; margin-bottom:15px;"><input type="checkbox" id="ageConfirm" style="width:auto; margin:0;" checked> I confirm that I am 18 years or older.</label>
     <button class="btn-full" onclick="handleAuth()" id="authBtn">Login</button>
-    <p class="small" style="text-align:center; margin-top:16px;">
-      <span id="toggleText">Don't have an account?</span> 
-      <span class="toggle-link" onclick="toggleAuthMode()" id="toggleBtn">Create Account</span>
-    </p>
+    <p class="small" style="text-align:center; margin-top:16px;"><span id="toggleText">Don't have an account?</span> <span class="toggle-link" onclick="toggleAuthMode()" id="toggleBtn">Create Account</span></p>
   </section>
-
   <section id="appSection" class="hidden">
     <nav>
       <button class="active" onclick="switchTab('chatTab', this)">💬 AI Chat</button>
       <button onclick="switchTab('imageTab', this)">🎨 Image Studio</button>
       <button onclick="switchTab('settingsTab', this)">⚙️ Settings</button>
     </nav>
-
     <div id="chatTab" class="panel active card">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <span class="small">⚡ Ultra-Fast Engine Active</span>
-        <button class="btn-secondary" style="padding:5px 10px; font-size:12px;" onclick="clearChatHistory()">🗑️ Clear Chat</button>
-      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><span class="small">⚡ Ultra-Fast Engine Active</span><button class="btn-secondary" style="padding:5px 10px; font-size:12px;" onclick="clearChatHistory()">🗑️ Clear Chat</button></div>
       <div id="messages"></div>
-      <div class="chat-input-box">
-        <textarea id="question" placeholder="Ask anything in Bangla or English..." onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); sendMessage();}"></textarea>
-        <button onclick="sendMessage()">Send ➤</button>
-      </div>
+      <div class="chat-input-box"><textarea id="question" placeholder="Ask anything in Bangla or English..." onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); sendMessage();}"></textarea><button onclick="sendMessage()">Send ➤</button></div>
     </div>
-
     <div id="imageTab" class="panel card">
       <h3 style="margin-top:0;">🎨 Truth-AI Image Studio</h3>
       <p class="small">Describe your imagination in English for high-definition AI art.</p>
-      <textarea id="imgPrompt" rows="3" placeholder="Example: Realistic futuristic cyberpunk Dhaka city at night, glowing neon lights, 8k resolution..."></textarea>
+      <textarea id="imgPrompt" rows="3" placeholder="Example: Realistic futuristic cyberpunk Dhaka city at night, 8k..."></textarea>
       <button class="btn-full" onclick="generateImage()">✨ Generate Image</button>
       <div id="imageResult"></div>
     </div>
-
     <div id="settingsTab" class="panel card">
       <h3 style="margin-top:0;">⚙️ AI Engine & API Settings</h3>
-      <p class="small">Paste your free Groq API Key (gsk_...) below. It stays 100% private inside your own device.</p>
-      
-      <label class="small">Groq API Key</label>
+      <p class="small">Paste your free Groq API Key (gsk_...) below. Stored privately on your device.</p>
       <input type="password" id="apiKeyInput" placeholder="Paste gsk_... key here">
-      
-      <label class="small">Select AI Brain Model</label>
       <select id="modelSelect">
         <option value="openai/gpt-oss-120b">GPT-OSS 120B (Super Intelligent)</option>
         <option value="llama-3.3-70b-versatile">Llama 3.3 70B (Ultra Fast & Smart)</option>
-        <option value="mixtral-8x7b-32768">Mixtral 8x7B (Coding & Logic)</option>
       </select>
-
       <button class="btn-full" onclick="saveSettings()">💾 Save Settings</button>
       <p id="keyStatus" class="small" style="margin-top:12px; color:#10b981; font-weight:600;"></p>
-      
-      <div style="margin-top:20px; padding-top:15px; border-top:1px solid var(--border);">
-        <p class="small" style="margin:0;"><strong>Developer Profile:</strong> Created & Architected by <strong>Sadim Molla</strong>.</p>
-      </div>
+      <p class="small" style="margin-top:15px;"><strong>Developer:</strong> Created & Architected by <strong>Sadim Molla</strong>.</p>
     </div>
   </section>
 </main>
-
-<footer>
-  Truth-AI Pro © 2026 • Created & Developed by <strong>Sadim Molla</strong>
-</footer>
-
+<footer>Truth-AI Pro © 2026 • Created & Developed by <strong>Sadim Molla</strong></footer>
 <script>
   let isSignup = false;
-  const systemPrompt = {
-    role: "system",
-    content: "You are Truth-AI Pro, an advanced artificial intelligence created and developed by Sadim Molla. Whenever anyone asks who created you, who your founder, owner, or developer is, always proudly state that Sadim Molla created you. Answer in the exact language the user uses (Bangla or English). Be direct, accurate, clear, and helpful."
-  };
-
+  const systemPrompt = { role: "system", content: "You are Truth-AI Pro, an advanced AI created and developed by Sadim Molla. Whenever anyone asks who created you, who your founder, owner, or developer is, always proudly say that Sadim Molla created you. Answer in the exact language the user uses. Be direct, clear, and helpful." };
   let chatHistory = JSON.parse(localStorage.getItem('truth_chat_v2')) || [systemPrompt];
 
   window.onload = () => {
     const user = localStorage.getItem('truth_user_v2');
     if (user) showApp(user);
-    
     const savedKey = localStorage.getItem('truth_groq_key');
-    const savedModel = localStorage.getItem('truth_model') || 'openai/gpt-oss-120b';
-    document.getElementById('modelSelect').value = savedModel;
-    
+    document.getElementById('modelSelect').value = localStorage.getItem('truth_model') || 'openai/gpt-oss-120b';
     if (savedKey) {
       document.getElementById('apiKeyInput').value = savedKey;
-  
+      document.getElementById('keyStatus').textContent = "✓ API Key is saved and active!";
+    }
+    renderMessages();
+  };
+
+  function toggleAuthMode() {
+    isSignup = !isSignup;
+    document.getElementById('authTitle').textContent = isSignup ? "📝 Create New Account" : "🔐 Login to Truth-AI";
+    document.getElementById('authBtn').textContent = isSignup ? "Create Account" : "Login";
+    document.getElementById('toggleText').textContent = isSignup ? "Already have an account?" : "Don't have an account?";
+    document.getElementById('toggleBtn').textContent = isSignup ? "Login" : "Create Account";
+  }
+
+  function handleAuth() {
+    const user = document.getElementById('usernameInput').value.trim();
+    const pass = document.getElementById('passwordInput').value.trim();
+    if (!user || !pass) return alert("Please enter both username and password.");
+    if (!document.getElementById('ageConfirm').checked) return alert("Please confirm you are 18+.");
+    let users = JSON.parse(localStorage.getItem('truth_accounts_v2')) || {};
+    if (isSignup) {
+      users[user] = pass;
+      localStorage.setItem('truth_accounts_v2', JSON.stringify(users));
+      localStorage.setItem('truth_user_v2', user);
+      showApp(user);
+    } else {
+      if (users[user] && users[user] === pass) {
+        localStorage.setItem('truth_user_v2', user);
+        showApp(user);
+      } else {
+        alert("Account not found! Please click 'Create Account' below first.");
+      }
+    }
+  }
+
+  function showApp(user) {
+    document.getElementById('authSection').classList.add('hidden');
+    document.getElementById('appSection').classList.remove('hidden');
+    document.getElementById('userHeader').classList.remove('hidden');
+    document.getElementById('displayUser').textContent = "👤 " + user;
+  }
+
+  function logout() { localStorage.removeItem('truth_user_v2'); location.reload(); }
+
+  function switchTab(tabId, btn) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  function saveSettings() {
+    const key = document.getElementById('apiKeyInput').value.trim();
+    if (!key.startsWith('gsk_')) return alert("Invalid Key! Groq API key must start with 'gsk_'");
+    localStorage.setItem('truth_groq_key', key);
+    localStorage.setItem('truth_model', document.getElementById('modelSelect').value);
+    document.getElementById('keyStatus').textContent = "✓ Saved! Your AI Engine is ready.";
+  }
+
+  function clearChatHistory() {
+    chatHistory = [systemPrompt];
+    localStorage.setItem('truth_chat_v2', JSON.stringify(chatHistory));
+    renderMessages();
+  }
+
+  function renderMessages() {
+    const box = document.getElementById('messages');
+    box.innerHTML = '';
+    if (chatHistory.length <= 1) {
+      box.innerHTML = '<div class="msg ai">Assalamu Alaikum! I am <strong>Truth-AI Pro</strong>, created by <strong>Sadim Molla</strong>. How can I help you today?</div>';
+      return;
+    }
+    chatHistory.forEach(m => {
+      if (m.role === 'system') return;
+      const div = document.createElement('div');
+      div.className = 'msg ' + (m.role === 'user' ? 'user' : 'ai');
+      div.textContent = m.content;
+      box.appendChild(div);
+    });
+    box.scrollTop = box.scrollHeight;
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('question');
+    const text = input.value.trim();
+    if (!text) return;
+    const apiKey = localStorage.getItem('truth_groq_key');
+    if (!apiKey) return alert("Please go to ⚙️ Settings tab and paste your Groq API Key first!");
+    chatHistory.push({ role: "user", content: text });
+    input.value = '';
+    renderMessages();
+    const box = document.getElementById('messages');
+    const loader = document.createElement('div');
+    loader.className = 'msg ai'; loader.textContent = "⚡ Thinking...";
+    box.appendChild(loader); box.scrollTop = box.scrollHeight;
+    try {
+      const res = await fetch("https://groq.com", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey },
+        body: JSON.stringify({ model: localStorage.getItem('truth_model') || 'openai/gpt-oss-120b', messages: chatHistory })
+      });
+      const data = await res.json();
+      box.removeChild(loader);
+      chatHistory.push({ role: "assistant", content: data.error ? "⚠️ Error: " + data.error.message : data.choices.message.content });
+      localStorage.setItem('truth_chat_v2', JSON.stringify(chatHistory));
+      renderMessages();
+    } catch (e) { box.removeChild(loader); alert("Connection failed: " + e.message); }
+  }
+
+  function generateImage() {
+    const prompt = document.getElementById('imgPrompt').value.trim();
+    if (!prompt) return alert("Please describe the image first.");
+    const url = `https://pollinations.ai{encodeURIComponent(prompt)}?width=1024&height=1024&seed=${Math.floor(Math.random()*100000)}&nologo=true`;
+    document.getElementById('imageResult').innerHTML = `<p class="small">✨ Generating image...</p><img src="${url}" onload="this.previousElementSibling.textContent='✓ Image Ready!'"><br><br><a href="${url}" target="_blank" download="TruthAI.jpg" style="display:inline-block; background:#3b82f6; color:white; padding:10px 18px; border-radius:10px; text-decoration:none; font-size:14px; font-weight:600;">⬇️ Open / Download Image</a>`;
+  }
+</script>
+</body>
+</html>
