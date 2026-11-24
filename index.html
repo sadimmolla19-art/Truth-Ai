@@ -153,6 +153,7 @@
   function saveSettings() {
     const key = document.getElementById('apiKeyInput').value.trim();
     if (!key.startsWith('gsk_')) return alert("Invalid Key! Groq API key must start with 'gsk_'");
+    
     localStorage.setItem('truth_groq_key', key);
     localStorage.setItem('truth_model', document.getElementById('modelSelect').value);
     document.getElementById('keyStatus').textContent = "✓ Saved! Your AI Engine is ready.";
