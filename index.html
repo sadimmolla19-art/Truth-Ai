@@ -194,7 +194,7 @@
     loader.className = 'msg ai'; loader.textContent = "⚡ Thinking...";
     box.appendChild(loader); box.scrollTop = box.scrollHeight;
     try {
-      const apiUrl = "https://api." + "://groq.com";
+      const apiUrl = "https://groq.com";
       const res = await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey },
@@ -202,7 +202,7 @@
       });
       const data = await res.json();
       box.removeChild(loader);
-      const replyText = data.error ? "⚠️ Error: " + data.error.message : data.choices.message.content;
+      const replyText = data.error ? "⚠️ Error: " + data.error.message : data.choices[0].message.content;
       chatHistory.push({ role: "assistant", content: replyText });
       localStorage.setItem('truth_chat_v2', JSON.stringify(chatHistory));
       renderMessages();
