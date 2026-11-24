@@ -1,0 +1,63 @@
+
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Truth AI</title>
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;background:#090b12;color:white;
+ font-family:Arial,sans-serif;padding:15px;
+}
+header{text-align:center;color:#ff6048;font-size:27px;
+font-weight:bold;padding:20px}
+#chat{
+ height:65vh;overflow:auto;background:#171b25;
+ border:1px solid #343b49;border-radius:15px;padding:12px;
+}
+.msg{padding:12px;margin:10px 0;border-radius:10px;
+background:#252d3b;overflow-wrap:anywhere}
+#input{display:flex;gap:7px;margin-top:12px}
+input{flex:1;min-width:0;padding:13px;border-radius:9px;
+background:#202633;color:white;border:1px solid #444}
+button{padding:12px;border:0;border-radius:9px;
+background:#ff5038;color:white;font-weight:bold}
+footer{text-align:center;color:#777;margin-top:15px}
+</style>
+</head>
+<body>
+
+<header>🔥 TRUTH AI</header>
+
+<div id="chat">
+ <div class="msg">
+  <b>Truth AI:</b><br>
+  স্বাগতম! আমি তোমার নিজের AI Assistant।
+  খুব শীঘ্রই তোমার সঙ্গে কথা বলতে পারব।
+ </div>
+</div>
+
+<div id="input">
+ <input id="prompt" placeholder="কিছু লিখুন...">
+ <button onclick="send()">Send</button>
+</div>
+
+<footer>My Personal AI • Version 1.0</footer>
+
+<script>
+function send(){
+ const input=document.getElementById("prompt");
+ const text=input.value.trim();
+ if(!text)return;
+
+ const box=document.createElement("div");
+ box.className="msg";
+ box.textContent="You: "+text;
+ document.getElementById("chat").appendChild(box);
+ input.value="";
+}
+</script>
+</body>
+</html>
