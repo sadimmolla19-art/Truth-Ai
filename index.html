@@ -194,7 +194,7 @@
     loader.className = 'msg ai'; loader.textContent = "⚡ Thinking...";
     box.appendChild(loader); box.scrollTop = box.scrollHeight;
     try {
-      const apiUrl = "https://groq.com";
+      const apiUrl = "https://api." + "://groq.com" + "/v1/chat/completions";
       const res = await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey },
