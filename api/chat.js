@@ -38,12 +38,12 @@ export default async function handler(req, res) {
     async function callGemini(targetModel, promptText, useWeb = false) {
       const parts = [{ text: promptText }];
       if (imageBase64) {
-        const b64Data = imageBase64.includes(',') ? imageBase64.split(',') : imageBase64;
+        const b64Data = imageBase64.includes(',') ? imageBase64.split(',').pop() : imageBase64;
         parts.push({ inlineData: { mimeType: mimeType || "image/jpeg", data: b64Data } });
       }
 
       const payload = {
-        contents: [{ role: "user", parts }],
+        contents: [{ role: "user", parts: parts }],
         systemInstruction: { parts: [{ text: sysPrompt }] }
       };
       if (useWeb) {
@@ -68,11 +68,13 @@ export default async function handler(req, res) {
           body: JSON.stringify(payload)
         });
         const d = await r.json();
-        const txt = d?.candidates?.?.content?.parts?.?.text;
+        const firstCand = Array.isArray(d.candidates) ? d.candidates.at(0) : null;
+        const firstPart = firstCand && firstCand.content && Array.isArray(firstCand.content.parts) ? firstCand.content.parts.at(0) : null;
+        const txt = firstPart ? firstPart.text : '';
         if (r.ok && txt) {
           return { text: txt, used: m };
         }
-        lastErr = d?.error?.message || `HTTP ${r.status}`;
+        lastErr = (d.error && d.error.message) || `HTTP ${r.status}`;
       }
       throw new Error(lastErr || 'Gemini API Error');
     }
@@ -92,13 +94,13 @@ export default async function handler(req, res) {
           })
         });
         const d = await r.json();
-        return r.ok ? d?.choices?.?.message?.content : null;
+        const firstChoice = Array.isArray(d.choices) ? d.choices.at(0) : null;
+        return (r.ok && firstChoice && firstChoice.message) ? firstChoice.message.content : null;
       } catch {
         return null;
       }
     }
 
-    // APEX GOD-MODE: Multi-Brain Parallel Execution + Critic Synthesis
     if (model === 'apex-god-mode') {
       const fullPrompt = `Conversation Context:\n${historyContext}\n\nCurrent Task: ${lastMsg}`;
       const tasks = [
@@ -106,11 +108,11 @@ export default async function handler(req, res) {
         callGemini('gemini-2.5-flash', `Provide deep technical analysis and clear solution for:\n${lastMsg}`, false)
       ];
 
-      if (partnerKeys?.openrouter) {
+      if (partnerKeys && partnerKeys.openrouter) {
         tasks.push(callPartner(OR_URL, partnerKeys.openrouter, 'nvidia/nemotron-3-ultra-550b-a55b:free', lastMsg));
         tasks.push(callPartner(OR_URL, partnerKeys.openrouter, 'particle-ai/particle-1:free', lastMsg));
       }
-      if (partnerKeys?.groq) {
+      if (partnerKeys && partnerKeys.groq) {
         tasks.push(callPartner(GROQ_URL, partnerKeys.groq, 'llama-3.3-70b-versatile', lastMsg));
       }
 
@@ -129,7 +131,7 @@ export default async function handler(req, res) {
 
       if (validAnswers.length === 1) {
         return res.status(200).json({
-          reply: validAnswers,
+          reply: validAnswers.at(0),
           usedModel: 'APEX ENGINE (GEMINI 2.5)'
         });
       }
@@ -148,7 +150,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // একক মডেল সিলেক্ট করা থাকলে
     const singleOut = await callGemini(model, `Context:\n${historyContext}\n\nUser: ${lastMsg}`, webSearch);
     return res.status(200).json({
       reply: singleOut.text,
@@ -158,4 +159,4 @@ export default async function handler(req, res) {
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
-      }
+          }
