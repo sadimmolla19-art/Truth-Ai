@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#030712">
-<title>Satyexa AI • Genesis Prime v11.5</title>
+<title>Satyexa AI • Genesis Prime v12.0</title>
 <style>
   :root {
-    --bg: #030712; --card: rgba(13, 20, 38, 0.94); --border: rgba(56, 189, 248, 0.3);
+    --bg: #030712; --card: rgba(13, 20, 38, 0.95); --border: rgba(56, 189, 248, 0.32);
     --accent: #10b981; --cyan: #06b6d4; --purple: #8b5cf6; --text: #f8fafc; --muted: #94a3b8;
   }
   * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
@@ -29,7 +29,7 @@
   .session-item { display: flex; justify-content: space-between; align-items: center; padding: 9px 11px; background: #0f172a; border: 1px solid #1e293b; border-radius: 9px; font-size: 12.5px; cursor: pointer; color: #cbd5e1; }
   .session-item.active { border-color: var(--accent); background: rgba(16, 185, 129, 0.12); color: white; font-weight: 600; }
 
-  main { flex: 1; max-width: 960px; width: 100%; margin: auto; padding: 10px; }
+  main { flex: 1; max-width: 980px; width: 100%; margin: auto; padding: 10px; }
   .card { background: var(--card); backdrop-filter: blur(18px); border: 1px solid var(--border); border-radius: 16px; padding: 16px; box-shadow: 0 20px 45px rgba(0,0,0,0.65); }
 
   input, textarea, select { width: 100%; padding: 11px 13px; margin: 6px 0 12px; background: #060a16; color: white; border: 1px solid #1e293b; border-radius: 11px; font-size: 14.5px; outline: none; transition: 0.2s; }
@@ -57,6 +57,7 @@
   .engine-tag { font-size: 9.5px; color: #38bdf8; font-weight: 700; margin-bottom: 4px; text-transform: uppercase; }
   .msg-actions { display: flex; gap: 6px; margin-top: 4px; }
   .mini-btn { background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 3px 8px; font-size: 10.5px; border-radius: 6px; }
+  pre { background: #020617; border: 1px solid #334155; padding: 10px; border-radius: 8px; overflow-x: auto; font-family: monospace; font-size: 12.5px; color: #38bdf8; margin: 6px 0; }
 
   .input-wrapper { margin-top: 10px; background: #060a16; border: 1px solid #334155; border-radius: 13px; padding: 8px; }
   .input-wrapper textarea { margin: 0; border: none; background: transparent; padding: 4px 6px; height: 48px; resize: none; font-size: 14.5px; }
@@ -75,6 +76,10 @@
   .key-box { background: #080d1d; padding: 10px; border-radius: 10px; border: 1px solid #1e293b; }
   .key-box label { font-size: 11px; color: #38bdf8; font-weight: 700; display: block; }
   .key-box input { margin: 5px 0 0; padding: 8px 10px; font-size: 12px; }
+
+  .auth-msg { font-size: 12px; padding: 8px; border-radius: 8px; margin-bottom: 10px; display: none; }
+  .auth-msg.err { display: block; background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.4); }
+  .auth-msg.ok { display: block; background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.4); }
 
   .panel { display: none; } .panel.active { display: block; } .hidden { display: none !important; }
   .small { font-size: 12px; color: var(--muted); } .toggle-link { color: var(--accent); cursor: pointer; font-weight: 700; text-decoration: underline; }
@@ -98,7 +103,7 @@
   <div class="logo-area">
     <button id="sidebarBtn" class="menu-btn hidden" onclick="toggleSidebar()">☰</button>
     <span class="logo">✦ SATYEXA AI</span>
-    <span class="badge">v11.5</span>
+    <span class="badge">v12.0 PRO</span>
   </div>
   <div id="userControls" class="user-info hidden">
     <span id="currentUserDisplay" style="color:#38bdf8; font-weight:700;">User</span>
@@ -110,14 +115,17 @@
   <div id="authCard" class="card" style="max-width: 430px; margin: 20px auto;">
     <h2 id="authTitle" style="margin:0 0 6px; font-size:20px;">🔐 Login to Satyexa AI</h2>
     <p class="small" style="margin:0 0 14px;">8-Engine Frontier AI • Powered by <strong>Sadimx Technology</strong></p>
-    <input type="text" id="authUser" placeholder="Username">
-    <input type="password" id="authPass" placeholder="Password">
+    <div id="authFeedback" class="auth-msg"></div>
+    <input type="text" id="authFullName" class="hidden" placeholder="Full Name (e.g. Sadim Molla)">
+    <input type="text" id="authUser" placeholder="Username (e.g. sadim19)">
+    <input type="password" id="authPass" placeholder="Password (min 4 characters)">
+    <input type="password" id="authPassConfirm" class="hidden" placeholder="Confirm Password">
     <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:#cbd5e1; margin-bottom:12px; cursor:pointer;">
-      <input type="checkbox" id="ageCheck" checked style="width:auto; margin:0;"> I confirm that I am 18 years or older.
+      <input type="checkbox" id="ageCheck" style="width:auto; margin:0;"> I confirm that I am 18 years or older.
     </label>
     <button id="authSubmitBtn" class="btn-full" onclick="handleAuth()">Login to Workspace</button>
     <p class="small" style="text-align:center; margin-top:12px;">
-      <span id="authSwitchText">New to Satyexa AI?</span> 
+      <span id="authSwitchText">Don't have an account?</span> 
       <span class="toggle-link" onclick="toggleAuthMode()" id="authSwitchLink">Create Account</span>
     </p>
   </div>
@@ -133,7 +141,7 @@
       <div class="top-status">
         <select id="engineSelect" class="engine-select">
           <option value="server-gemini">⚡ Auto Best Engine (Server Active)</option>
-          <option value="gemini">1. Google Gemini 2.5 Flash (Server)</option>
+          <option value="gemini">1. Google Gemini 2.5 Flash (Server/Key)</option>
           <option value="groq">2. Groq (Llama 3.3 70B)</option>
           <option value="cerebras">3. Cerebras (Qwen 3.8 / Llama)</option>
           <option value="openrouter">4. OpenRouter (DeepSeek R1)</option>
@@ -180,7 +188,7 @@
 
     <div id="panelKeys" class="panel card">
       <h3 style="margin:0 0 6px;">⚙ 8-AI Frontier Engine Keys</h3>
-      <p class="small" style="color:#34d399;">✅ Server Default Key is ACTIVE! Everyone can chat without adding any key. Add extra keys below only if you want to use other engines.</p>
+      <p class="small" style="color:#34d399;">✅ Server Default Key is ACTIVE! Everyone can chat without any key. Add free keys below to unlock all 8 frontier engines directly.</p>
       <div class="key-grid">
         <div class="key-box"><label>1. Google AI Studio (Optional Override)</label><input type="password" id="key_gemini" placeholder="Using Server Key by default"></div>
         <div class="key-box"><label>2. Groq Cloud (Llama 3.3 70B)</label><input type="password" id="key_groq" placeholder="gsk_..."></div>
@@ -191,7 +199,7 @@
         <div class="key-box"><label>7. GitHub Models Token</label><input type="password" id="key_github" placeholder="ghp_..."></div>
         <div class="key-box"><label>8. Cohere (Command-A+)</label><input type="password" id="key_cohere" placeholder="..."></div>
       </div>
-      <button class="btn-full" style="margin-top:14px;" onclick="saveAllKeys()">💾 Save Extra AI Keys</button>
+      <button class="btn-full" style="margin-top:14px;" onclick="saveAllKeys()">💾 Save All 8 AI Keys</button>
     </div>
   </div>
 </main>
@@ -202,67 +210,52 @@
 </footer>
 
 <script>
-  let isSignup = false;
-  let webSearch = false;
-  let splitMode = false;
-  let attachedImage = null;
-  let sessions = JSON.parse(localStorage.getItem('satyexa_sessions') || '[]');
-  let activeSessionId = null;
+  let isSignup = false, webSearch = false, splitMode = false, attachedImage = null;
+  let currentUser = null, sessions = [], activeSessionId = null;
 
   window.onload = () => {
-    const savedUser = localStorage.getItem('satyexa_user');
-    if (savedUser) showWorkspace(savedUser);
+    const loggedInUser = localStorage.getItem('satyexa_active_user');
+    if (loggedInUser) {
+      const users = JSON.parse(localStorage.getItem('satyexa_users_db') || '{}');
+      if (users[loggedInUser]) showWorkspace(loggedInUser, users[loggedInUser].name);
+    }
     loadSavedKeys();
   };
 
+  function showAuthMsg(msg, isErr = true) {
+    const box = document.getElementById('authFeedback');
+    box.innerText = msg;
+    box.className = 'auth-msg ' + (isErr ? 'err' : 'ok');
+  }
+
   function toggleAuthMode() {
     isSignup = !isSignup;
+    document.getElementById('authFeedback').className = 'auth-msg';
     document.getElementById('authTitle').innerText = isSignup ? '🚀 Create Satyexa Account' : '🔐 Login to Satyexa AI';
-    document.getElementById('authSubmitBtn').innerText = isSignup ? 'Register & Enter' : 'Login to Workspace';
-    document.getElementById('authSwitchText').innerText = isSignup ? 'Already have an account?' : 'New to Satyexa AI?';
+    document.getElementById('authFullName').classList.toggle('hidden', !isSignup);
+    document.getElementById('authPassConfirm').classList.toggle('hidden', !isSignup);
+    document.getElementById('authSubmitBtn').innerText = isSignup ? 'Create Professional Account' : 'Login to Workspace';
+    document.getElementById('authSwitchText').innerText = isSignup ? 'Already registered?' : "Don't have an account?";
     document.getElementById('authSwitchLink').innerText = isSignup ? 'Login Here' : 'Create Account';
   }
 
   function handleAuth() {
-    const user = document.getElementById('authUser').value.trim();
+    const user = document.getElementById('authUser').value.trim().toLowerCase();
     const pass = document.getElementById('authPass').value.trim();
-    if (!user || !pass) return alert('Please enter username and password!');
-    if (!document.getElementById('ageCheck').checked) return alert('Please confirm age 18+');
-    localStorage.setItem('satyexa_user', user);
-    showWorkspace(user);
-  }
+    const ageOk = document.getElementById('ageCheck').checked;
+    const users = JSON.parse(localStorage.getItem('satyexa_users_db') || '{}');
 
-  function showWorkspace(user) {
-    document.getElementById('authCard').classList.add('hidden');
-    document.getElementById('workspace').classList.remove('hidden');
-    document.getElementById('sidebarBtn').classList.remove('hidden');
-    document.getElementById('userControls').classList.remove('hidden');
-    document.getElementById('currentUserDisplay').innerText = user;
-    if (sessions.length === 0) createNewSession();
-    else { activeSessionId = sessions[0].id; renderSessions(); renderMessages(); }
-  }
+    if (!user || !pass) return showAuthMsg('❌ Username and Password are required!');
+    if (!ageOk) return showAuthMsg('❌ You must confirm that you are 18+ years old.');
 
-  function logout() { localStorage.removeItem('satyexa_user'); location.reload(); }
-  function toggleSidebar() { document.getElementById('chatSidebar').classList.toggle('open'); document.getElementById('sidebarOverlay').classList.toggle('open'); }
+    if (isSignup) {
+      const fullName = document.getElementById('authFullName').value.trim() || user;
+      const confirmPass = document.getElementById('authPassConfirm').value.trim();
+      if (pass.length < 4) return showAuthMsg('❌ Password must be at least 4 characters.');
+      if (pass !== confirmPass) return showAuthMsg('❌ Passwords do not match!');
+      if (users[user]) return showAuthMsg('❌ Username already exists! Please login or choose another.');
 
-  function switchTab(tab) {
-    ['chat', 'image', 'keys'].forEach(t => {
-      document.getElementById('panel' + t.charAt(0).toUpperCase() + t.slice(1)).classList.remove('active');
-      document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.remove('active');
-    });
-    document.getElementById('panel' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
-    document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
-  }
-
-  function toggleWeb() {
-    webSearch = !webSearch;
-    const btn = document.getElementById('webBtn');
-    btn.innerText = webSearch ? '🌐 Web: ON' : '🌐 Web: OFF';
-    btn.classList.toggle('on', webSearch);
-  }
-
-  function toggleSplitMode() {
-    splitMode = !splitMode;
-    const btn = document.getElementById('splitBtn');
-    const splitBox = document.getElementById('messagesSplit');
-        
+      users[user] = { name: fullName, pass: btoa(pass), created: new Date().toISOString() };
+      localStorage.setItem('satyexa_users_db', JSON.stringify(users));
+      showAuthMsg('✅ Account created successfully! Logging in...', false);
+  
