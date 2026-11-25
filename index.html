@@ -94,4 +94,309 @@
 </style>
 </head>
 <body>
-  
+  <div id="sandboxModal" class="sandbox-modal hidden">
+  <div class="sandbox-header">
+    <strong style="color:#34d399;">💻 Satyexa Live Code Sandbox</strong>
+    <button class="logout-btn" onclick="closeSandbox()">✕ Close Preview</button>
+  </div>
+  <iframe id="sandboxFrame" class="sandbox-frame"></iframe>
+</div>
+
+<div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+<aside id="chatSidebar" class="sidebar">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+    <strong style="color:#10b981; font-size:15px;">✦ Satyexa Chats</strong>
+    <button onclick="toggleSidebar()" style="background:none; color:#94a3b8; border:none; font-size:18px; padding:2px 6px;">✕</button>
+  </div>
+  <button onclick="createNewSession()" class="btn-full" style="margin-bottom:8px;">+ New Chat</button>
+  <button onclick="exportCurrentChat()" class="btn-full btn-secondary" style="font-size:12px; padding:7px;">📥 Export Chat (.txt)</button>
+  <div id="sessionList" class="session-list"></div>
+</aside>
+
+<header>
+  <div class="logo-area">
+    <button id="sidebarBtn" class="menu-btn hidden" onclick="toggleSidebar()">☰</button>
+    <span class="logo">✦ SATYEXA AI</span>
+    <span class="badge">v20.0 PY-APEX</span>
+  </div>
+  <div id="userControls" class="user-info hidden">
+    <span id="currentUserDisplay" style="color:#38bdf8; font-weight:700;">User</span>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+  </div>
+</header>
+
+<main>
+  <div id="authCard" class="card" style="max-width: 430px; margin: 20px auto;">
+    <h2 id="authTitle" style="margin:0 0 6px; font-size:20px;">🔐 Login to Satyexa AI</h2>
+    <p class="small" style="margin:0 0 14px;">Python APEX Multi-Brain AI • <strong>Sadimx Technology</strong></p>
+    <div id="authFeedback" class="auth-msg"></div>
+    <input type="text" id="authFullName" class="hidden" placeholder="Full Name (e.g. Sadim Molla)">
+    <input type="text" id="authUser" placeholder="Username (e.g. sadim19)">
+    <input type="password" id="authPass" placeholder="Password (min 4 characters)">
+    <input type="password" id="authPassConfirm" class="hidden" placeholder="Confirm Password">
+    <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:#cbd5e1; margin-bottom:12px; cursor:pointer;">
+      <input type="checkbox" id="ageCheck" style="width:auto; margin:0;"> I confirm that I am 18 years or older.
+    </label>
+    <button id="authSubmitBtn" class="btn-full" onclick="handleAuth()">Login to Workspace</button>
+    <p class="small" style="text-align:center; margin-top:12px;">
+      <span id="authSwitchText">Don't have an account?</span> 
+      <span class="toggle-link" onclick="toggleAuthMode()" id="authSwitchLink">Create Account</span>
+    </p>
+  </div>
+
+  <div id="workspace" class="hidden">
+    <nav>
+      <button id="tabChat" class="active" onclick="switchTab('chat')">💬 APEX Chat</button>
+      <button id="tabImage" onclick="switchTab('image')">🎨 8K Studio</button>
+      <button id="tabBrain" onclick="switchTab('brain')">🧬 AI Brain</button>
+      <button id="tabKeys" onclick="switchTab('keys')">⚙ 15 Engines</button>
+    </nav>
+
+    <div id="panelChat" class="panel active card">
+      <div class="top-status">
+        <select id="engineSelect" class="engine-select">
+          <optgroup label="👑 Python Multi-Brain Architecture (Server Active)">
+            <option value="apex-god-mode">👑 APEX GOD-MODE (Python Multi-AI + Critic)</option>
+          </optgroup>
+          <optgroup label="🔥 Google Gemini 4 & 3.8 (Python Server - Free)">
+            <option value="gemini-4-neon">1. Google Gemini 4 Neon (Flagship)</option>
+            <option value="gemini-4-hydrogen">2. Google Gemini 4 Hydrogen (Pro)</option>
+            <option value="gemini-4-carbon">3. Google Gemini 4 Carbon (Deep)</option>
+            <option value="gemini-4-argon">4. Google Gemini 4 Argon (Stable)</option>
+            <option value="gemini-3.8-flash">5. Google Gemini 3.8 Flash (Fast)</option>
+          </optgroup>
+          <optgroup label="⚡ Partner Frontier Models (Add Free Key)">
+            <option value="or-nemotron">6. NVIDIA Nemotron 3 Ultra 550B (Free)</option>
+            <option value="or-gemma4">7. Google Gemma 4 31B IT (Free)</option>
+            <option value="or-particle">8. Particle-1 / DeepSeek V4.1 (Free)</option>
+            <option value="groq-gptoss">9. Groq OpenAI GPT-OSS 120B</option>
+            <option value="groq-llama">10. Groq Llama 3.3 70B Versatile</option>
+            <option value="cerebras">11. Cerebras Qwen 3 32B</option>
+            <option value="mistral">12. Mistral Small 4 Latest</option>
+            <option value="sambanova">13. SambaNova DeepSeek V3</option>
+            <option value="github">14. GitHub Models GPT-4o</option>
+          </optgroup>
+        </select>
+        <button id="thinkBtn" class="web-toggle think-toggle" onclick="toggleDeepThink()">🧠 Think: OFF</button>
+        <button id="splitBtn" class="web-toggle" onclick="toggleSplitMode()">◫ Split: OFF</button>
+        <button id="webBtn" class="web-toggle" onclick="toggleWeb()">🌐 Web: OFF</button>
+      </div>
+
+      <div class="chat-container">
+        <div id="messages"></div>
+        <div id="messagesSplit" class="hidden"></div>
+      </div>
+
+      <div id="previewBox" class="hidden">
+        <img id="previewImg" src="">
+        <span class="small" style="flex:1;">Image attached (Vision Ready)</span>
+        <button class="mini-btn" onclick="removeImage()">❌ Remove</button>
+      </div>
+
+      <div class="input-wrapper">
+        <textarea id="promptInput" placeholder="Command Satyexa Python APEX (Ask for code, research, math, or web apps)..."></textarea>
+        <div class="input-bottom-bar">
+          <div class="left-tools">
+            <input type="file" id="imageUpload" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+            <button class="icon-btn" onclick="document.getElementById('imageUpload').click()" title="Upload Image">📷</button>
+            <button id="micBtn" class="icon-btn" onclick="toggleVoice()" title="Voice Input">🎤</button>
+          </div>
+          <button class="send-btn" onclick="sendMessage()">Execute ➤</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="panelImage" class="panel card">
+      <h3 style="margin:0 0 6px;">🎨 Satyexa Ultra HD Image Studio</h3>
+      <p class="small">Describe your imagination in English for instant 8K AI art generation.</p>
+      <textarea id="imgPrompt" rows="3" placeholder="e.g. A futuristic cyberpunk city in Dhaka at night, neon lights, ultra detailed 8k..."></textarea>
+      <button class="btn-full" onclick="generateArt()">✨ Generate HD Artwork</button>
+      <div id="imageResult"></div>
+    </div>
+
+    <div id="panelBrain" class="panel card">
+      <h3 style="margin:0 0 6px;">🧬 Custom AI Brain & System Persona</h3>
+      <p class="small">Set permanent instructions for how Satyexa AI behaves, speaks, and codes for you.</p>
+      <textarea id="customPersonaInput" rows="4" placeholder="e.g. Always act as a Principal Software Architect and explain complex topics in simple Bengali with clean code..."></textarea>
+      <button class="btn-full" onclick="savePersona()">💾 Save AI Brain Persona</button>
+    </div>
+
+    <div id="panelKeys" class="panel card">
+      <h3 style="margin:0 0 6px;">⚙ APEX & Frontier Engine Keys</h3>
+      <p class="small" style="color:#34d399;">✅ Python APEX GOD-MODE & Gemini 4 (Neon, Hydrogen, Carbon, Argon) are ACTIVE via Server! Add free partner keys below to expand the Council.</p>
+      <div class="key-grid">
+        <div class="key-box"><label>1. Google AI Studio (Gemini 4 Server Active)</label><input type="password" id="key_gemini" placeholder="Using Server Gemini 4 by default"></div>
+        <div class="key-box"><label>2. OpenRouter (Nemotron 550B / Gemma 4 / Particle-1)</label><input type="password" id="key_openrouter" placeholder="sk-or-..."></div>
+        <div class="key-box"><label>3. Groq Cloud (GPT-OSS 120B & Llama 3.3)</label><input type="password" id="key_groq" placeholder="gsk_..."></div>
+        <div class="key-box"><label>4. Cerebras Cloud (Qwen 3 32B)</label><input type="password" id="key_cerebras" placeholder="csk-..."></div>
+        <div class="key-box"><label>5. Mistral AI (Mistral Small 4)</label><input type="password" id="key_mistral" placeholder="..."></div>
+        <div class="key-box"><label>6. SambaNova Cloud (DeepSeek V3)</label><input type="password" id="key_sambanova" placeholder="..."></div>
+        <div class="key-box"><label>7. GitHub Models Token (GPT-4o)</label><input type="password" id="key_github" placeholder="ghp_..."></div>
+      </div>
+      <button class="btn-full" style="margin-top:14px;" onclick="saveAllKeys()">💾 Save Partner AI Keys</button>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <strong>Architecture & Ownership:</strong> Developed by <strong>Sadimx Technology</strong> • Owner & Founder: <strong>Sadim Molla</strong>.<br>
+  Satyexa AI © 2026 • Powered by <strong>Sadimx Technology</strong> • Owner: <strong>Sadim Molla</strong>
+                                                            </footer>
+  <script>
+  let isSignup = false, webSearch = false, deepThink = false, splitMode = false, attachedImage = null;
+  let currentUser = null, sessions = [], activeSessionId = null;
+
+  const URL_OR = "https://" + "openrouter.ai" + "/api/v1/chat/completions";
+  const URL_GROQ = "https://" + "://groq.com" + "/openai/v1/chat/completions";
+  const URL_CERE = "https://" + "api.cerebras.ai" + "/v1/chat/completions";
+  const URL_MIST = "https://" + "api.mistral.ai" + "/v1/chat/completions";
+  const URL_SAMB = "https://" + "api.sambanova.ai" + "/v1/chat/completions";
+  const URL_GITH = "https://" + "://azure.com" + "/chat/completions";
+
+  window.onload = () => {
+    const loggedInUser = localStorage.getItem('satyexa_active_user');
+    if (loggedInUser) {
+      const users = JSON.parse(localStorage.getItem('satyexa_users_db') || '{}');
+      if (users[loggedInUser]) showWorkspace(loggedInUser, users[loggedInUser].name);
+    }
+    loadSavedKeys();
+    document.getElementById('customPersonaInput').value = localStorage.getItem('satyexa_persona') || '';
+  };
+
+  function showAuthMsg(msg, isErr = true) {
+    const box = document.getElementById('authFeedback');
+    box.innerText = msg; box.className = 'auth-msg ' + (isErr ? 'err' : 'ok');
+  }
+
+  function toggleAuthMode() {
+    isSignup = !isSignup;
+    document.getElementById('authFeedback').className = 'auth-msg';
+    document.getElementById('authTitle').innerText = isSignup ? '🚀 Create Satyexa Account' : '🔐 Login to Satyexa AI';
+    document.getElementById('authFullName').classList.toggle('hidden', !isSignup);
+    document.getElementById('authPassConfirm').classList.toggle('hidden', !isSignup);
+    document.getElementById('authSubmitBtn').innerText = isSignup ? 'Create Professional Account' : 'Login to Workspace';
+    document.getElementById('authSwitchText').innerText = isSignup ? 'Already registered?' : "Don't have an account?";
+    document.getElementById('authSwitchLink').innerText = isSignup ? 'Login Here' : 'Create Account';
+  }
+
+  function handleAuth() {
+    const user = document.getElementById('authUser').value.trim().toLowerCase();
+    const pass = document.getElementById('authPass').value.trim();
+    const ageOk = document.getElementById('ageCheck').checked;
+    const users = JSON.parse(localStorage.getItem('satyexa_users_db') || '{}');
+
+    if (!user || !pass) return showAuthMsg('❌ Username and Password are required!');
+    if (!ageOk) return showAuthMsg('❌ You must confirm that you are 18+ years old.');
+
+    if (isSignup) {
+      const fullName = document.getElementById('authFullName').value.trim() || user;
+      const confirmPass = document.getElementById('authPassConfirm').value.trim();
+      if (pass.length < 4) return showAuthMsg('❌ Password must be at least 4 characters.');
+      if (pass !== confirmPass) return showAuthMsg('❌ Passwords do not match!');
+      if (users[user]) return showAuthMsg('❌ Username already exists! Please login or choose another.');
+
+      users[user] = { name: fullName, pass: btoa(pass), created: new Date().toISOString() };
+      localStorage.setItem('satyexa_users_db', JSON.stringify(users));
+      showAuthMsg('✅ Account created successfully! Logging in...', false);
+      setTimeout(() => { localStorage.setItem('satyexa_active_user', user); showWorkspace(user, fullName); }, 800);
+    } else {
+      if (!users[user]) return showAuthMsg('❌ Account not found! Click "Create Account" below first.');
+      if (users[user].pass !== btoa(pass)) return showAuthMsg('❌ Incorrect password! Please try again.');
+      localStorage.setItem('satyexa_active_user', user);
+      showWorkspace(user, users[user].name);
+    }
+  }
+
+  function showWorkspace(user, displayName) {
+    currentUser = user;
+    document.getElementById('authCard').classList.add('hidden');
+    document.getElementById('workspace').classList.remove('hidden');
+    document.getElementById('sidebarBtn').classList.remove('hidden');
+    document.getElementById('userControls').classList.remove('hidden');
+    document.getElementById('currentUserDisplay').innerText = displayName || user;
+    sessions = JSON.parse(localStorage.getItem('satyexa_sessions_' + user) || '[]');
+    if (sessions.length === 0) createNewSession();
+    else { activeSessionId = sessions.id; renderSessions(); renderMessages(); }
+  }
+
+  function logout() { localStorage.removeItem('satyexa_active_user'); location.reload(); }
+  function toggleSidebar() { document.getElementById('chatSidebar').classList.toggle('open'); document.getElementById('sidebarOverlay').classList.toggle('open'); }
+
+  function switchTab(tab) {
+    ['chat', 'image', 'brain', 'keys'].forEach(t => {
+      document.getElementById('panel' + t.charAt(0).toUpperCase() + t.slice(1)).classList.remove('active');
+      document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.remove('active');
+    });
+    document.getElementById('panel' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+    document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+  }
+
+  function toggleWeb() { webSearch = !webSearch; const btn = document.getElementById('webBtn'); btn.innerText = webSearch ? '🌐 Web: ON' : '🌐 Web: OFF'; btn.classList.toggle('on', webSearch); }
+  function toggleDeepThink() { deepThink = !deepThink; const btn = document.getElementById('thinkBtn'); btn.innerText = deepThink ? '🧠 Think: ON' : '🧠 Think: OFF'; btn.classList.toggle('on', deepThink); }
+  function toggleSplitMode() {
+    splitMode = !splitMode; const btn = document.getElementById('splitBtn'); const splitBox = document.getElementById('messagesSplit');
+    btn.innerText = splitMode ? '◫ Split: ON' : '◫ Split: OFF'; btn.classList.toggle('on', splitMode); splitBox.classList.toggle('hidden', !splitMode);
+    if (splitMode) splitBox.innerHTML = '<div class="msg-wrap ai-wrap"><div class="engine-tag">SPLIT COMPARE ENGINE</div><div class="msg ai">Split View Ready! Send a prompt to compare dual AI answers side-by-side.</div></div>';
+  }
+
+  function savePersona() { localStorage.setItem('satyexa_persona', document.getElementById('customPersonaInput').value.trim()); alert('✅ Custom AI Brain Persona saved!'); }
+
+  function createNewSession() {
+    const id = Date.now().toString();
+    sessions.unshift({ id, title: 'Chat ' + (sessions.length + 1), messages: [{ role: 'ai', text: 'Assalamu Alaikum! Welcome to Satyexa AI v20.0 PYTHON APEX. Parallel Multi-Brain Fusion, Critic Loop & Live Code Sandbox are online!', engine: 'PYTHON APEX' }] });
+    activeSessionId = id; saveSessions(); renderSessions(); renderMessages();
+  }
+
+  function saveSessions() { if (currentUser) localStorage.setItem('satyexa_sessions_' + currentUser, JSON.stringify(sessions)); }
+
+  function renderSessions() {
+    const list = document.getElementById('sessionList'); list.innerHTML = '';
+    sessions.forEach(s => {
+      const div = document.createElement('div');
+      div.className = 'session-item' + (s.id === activeSessionId ? ' active' : '');
+      div.innerHTML = `<span onclick="selectSession('${s.id}')" style="flex:1;">💬 ${s.title}</span><span onclick="deleteSession('${s.id}')" style="color:#f87171; padding-left:8px;">✕</span>`;
+      list.appendChild(div);
+    });
+  }
+
+  function selectSession(id) { activeSessionId = id; renderSessions(); renderMessages(); toggleSidebar(); }
+  function deleteSession(id) { sessions = sessions.filter(s => s.id !== id); if (sessions.length === 0) createNewSession(); else { activeSessionId = sessions.id; saveSessions(); renderSessions(); renderMessages(); } }
+
+  function renderMessages() {
+    const box = document.getElementById('messages'); box.innerHTML = '';
+    const session = sessions.find(s => s.id === activeSessionId);
+    if (session) session.messages.forEach(m => appendMessageUI(box, m.role, m.text, m.engine));
+  }
+
+  function formatRichText(str) {
+    let safe = str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    safe = safe.replace(/```([\s\S]*?)```/g, '<pre>$1</pre>');
+    safe = safe.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    return safe;
+  }
+
+  function appendMessageUI(container, role, text, engine = '') {
+    const wrap = document.createElement('div');
+    wrap.className = 'msg-wrap ' + (role === 'user' ? 'user-wrap' : 'ai-wrap');
+    let html = (role === 'ai' && engine) ? `<div class="engine-tag">${engine}</div>` : '';
+    html += `<div class="msg ${role}">${formatRichText(text)}</div>`;
+    if (role === 'ai') {
+      const hasHtmlCode = text.includes('```html') || text.includes('<!DOCTYPE html>') || text.includes('<html');
+      html += `<div class="msg-actions">
+        <button class="mini-btn" onclick="copyText(this, \`${encodeURIComponent(text)}\`)">📋 Copy</button>
+        <button class="mini-btn" onclick="speakText(\`${encodeURIComponent(text)}\`)">🔊 Listen</button>
+        ${hasHtmlCode ? `<button class="mini-btn run-btn" onclick="runLiveCode(\`${encodeURIComponent(text)}\`)">▶ Run Live Preview</button>` : ''}
+      </div>`;
+    }
+    wrap.innerHTML = html; container.appendChild(wrap); container.scrollTop = container.scrollHeight;
+  }
+
+  function runLiveCode(encoded) {
+    const raw = decodeURIComponent(encoded);
+    const match = raw.match(/```html([\s\S]*?)```/) || raw.match(/```([\s\S]*?)```/);
+    document.getElementById('sandboxFrame').srcdoc = match ? match : raw;
+    document.getElementById('sandboxModal').classList.remove('hidden');
+  }
+  function closeSandbox() { document.getElementById('sandboxModal').classList.add('hidden'); }
+  function copyText(btn, encoded) { navigator.clipboard.writeText(decodeURIComponent(encoded)); btn.innerText = '✅ Copied'; setTimeout(() => btn.innerText = '📋 Copy', 1500); }
+    
