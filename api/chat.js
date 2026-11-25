@@ -1,0 +1,161 @@
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    const {
+      messages,
+      imageBase64,
+      mimeType,
+      webSearch,
+      deepThink,
+      customPersona,
+      model,
+      partnerKeys
+    } = req.body;
+
+    const apiKey = process.env.GEMINI_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'GEMINI_KEY missing in Vercel' });
+    }
+
+    const P = "https:" + "//";
+    const GEMINI_BASE = P + ["generativelanguage", "googleapis", "com"].join(".") + "/v1beta/models/";
+    const OR_URL = P + ["openrouter", "ai"].join(".") + "/api/v1/chat/completions";
+    const GROQ_URL = P + ["api", "groq", "com"].join(".") + "/openai/v1/chat/completions";
+
+    const lastMsg = (messages && messages.length > 0) ? messages[messages.length - 1].text : "Hello";
+    const historyContext = (messages || []).slice(-6).map(m => `${m.role.toUpperCase()}: ${m.text}`).join('\n');
+
+    const sysPrompt =
+      "You are Satyexa AI (Genesis Prime v20.0 APEX), created and owned by Sadim Molla, Founder of Sadimx Technology. " +
+      "If anyone asks who created you or who your owner is, always proudly answer that you were created by Sadim Molla and Sadimx Technology. " +
+      "Automatically detect the language of the user's message and always respond fluently in that exact same language (English, Bengali, Hindi, Arabic, Spanish, French, etc.), unless the user explicitly asks to translate or reply in another language.\n" +
+      (customPersona ? `User Custom Persona: ${customPersona}\n` : "") +
+      (deepThink ? "CRITICAL: Perform deep, multi-step chain-of-thought reasoning before giving the final structured answer." : "Provide sharp, accurate, production-grade responses.");
+
+    async function callGemini(targetModel, promptText, useWeb = false) {
+      const parts = [{ text: promptText }];
+      if (imageBase64) {
+        const b64Data = imageBase64.includes(',') ? imageBase64.split(',') : imageBase64;
+        parts.push({ inlineData: { mimeType: mimeType || "image/jpeg", data: b64Data } });
+      }
+
+      const payload = {
+        contents: [{ role: "user", parts }],
+        systemInstruction: { parts: [{ text: sysPrompt }] }
+      };
+      if (useWeb) {
+        payload.tools = [{ googleSearch: {} }];
+      }
+
+      const modelMap = {
+        'gemini-4-neon': 'gemini-2.5-pro',
+        'gemini-4-hydrogen': 'gemini-2.5-flash',
+        'gemini-4-carbon': 'gemini-2.5-pro',
+        'gemini-4-argon': 'gemini-2.0-flash',
+        'gemini-3.8-flash': 'gemini-2.5-flash'
+      };
+      const primary = modelMap[targetModel] || targetModel || 'gemini-2.5-flash';
+      const chain = [...new Set([primary, 'gemini-2.5-flash', 'gemini-2.0-flash'])];
+
+      let lastErr = '';
+      for (const m of chain) {
+        const r = await fetch(`${GEMINI_BASE}${m}:generateContent?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const d = await r.json();
+        const txt = d?.candidates?.?.content?.parts?.?.text;
+        if (r.ok && txt) {
+          return { text: txt, used: m };
+        }
+        lastErr = d?.error?.message || `HTTP ${r.status}`;
+      }
+      throw new Error(lastErr || 'Gemini API Error');
+    }
+
+    async function callPartner(url, key, modelId, promptText) {
+      if (!key) return null;
+      try {
+        const r = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+          body: JSON.stringify({
+            model: modelId,
+            messages: [
+              { role: 'system', content: sysPrompt },
+              { role: 'user', content: promptText }
+            ]
+          })
+        });
+        const d = await r.json();
+        return r.ok ? d?.choices?.?.message?.content : null;
+      } catch {
+        return null;
+      }
+    }
+
+    // APEX GOD-MODE: Multi-Brain Parallel Execution + Critic Synthesis
+    if (model === 'apex-god-mode') {
+      const fullPrompt = `Conversation Context:\n${historyContext}\n\nCurrent Task: ${lastMsg}`;
+      const tasks = [
+        callGemini('gemini-2.5-pro', fullPrompt, webSearch),
+        callGemini('gemini-2.5-flash', `Provide deep technical analysis and clear solution for:\n${lastMsg}`, false)
+      ];
+
+      if (partnerKeys?.openrouter) {
+        tasks.push(callPartner(OR_URL, partnerKeys.openrouter, 'nvidia/nemotron-3-ultra-550b-a55b:free', lastMsg));
+        tasks.push(callPartner(OR_URL, partnerKeys.openrouter, 'particle-ai/particle-1:free', lastMsg));
+      }
+      if (partnerKeys?.groq) {
+        tasks.push(callPartner(GROQ_URL, partnerKeys.groq, 'llama-3.3-70b-versatile', lastMsg));
+      }
+
+      const results = await Promise.allSettled(tasks);
+      const validAnswers = [];
+      for (const r of results) {
+        if (r.status === 'fulfilled' && r.value) {
+          const val = typeof r.value === 'string' ? r.value : r.value.text;
+          if (val) validAnswers.push(val);
+        }
+      }
+
+      if (validAnswers.length === 0) {
+        return res.status(500).json({ error: 'All APEX engines are currently busy. Try again.' });
+      }
+
+      if (validAnswers.length === 1) {
+        return res.status(200).json({
+          reply: validAnswers,
+          usedModel: 'APEX ENGINE (GEMINI 2.5)'
+        });
+      }
+
+      const formatted = validAnswers.map((ans, idx) => `[Expert Engine ${idx + 1}]:\n${ans}`).join('\n\n====================\n\n');
+      const judgePrompt =
+        `You are the Supreme Judge & Critic of Satyexa AI (created by Sadim Molla, Sadimx Technology).\n` +
+        `User Query: "${lastMsg}"\n\n` +
+        `Independent Expert Outputs:\n${formatted}\n\n` +
+        `TASK: Audit every output for bugs or missing details, merge the highest-IQ reasoning and cleanest code into ONE definitive response in the user's language without mentioning Engine numbers.`;
+
+      const finalOut = await callGemini('gemini-2.5-flash', judgePrompt, false);
+      return res.status(200).json({
+        reply: finalOut.text,
+        usedModel: `APEX GOD-MODE (${validAnswers.length} Brains Merged)`
+      });
+    }
+
+    // একক মডেল সিলেক্ট করা থাকলে
+    const singleOut = await callGemini(model, `Context:\n${historyContext}\n\nUser: ${lastMsg}`, webSearch);
+    return res.status(200).json({
+      reply: singleOut.text,
+      usedModel: `SATYEXA • ${singleOut.used.toUpperCase()}`
+    });
+
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+      }
