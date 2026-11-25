@@ -456,3 +456,148 @@
     }
   }
   
+  async function callGemini(key, text, imgBase64, mime) {
+    const parts = [];
+    if (text) parts.push({ text: text });
+    if (imgBase64) parts.push({ inline_data: { mime_type: mime, data: imgBase64 } });
+    const models = ['gemini-3.8-flash', 'gemini-2.5-flash'];
+    for (let model of models) {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+          contents: [{ role: 'user', parts: parts }]
+        })
+      });
+      const data = await res.json();
+      if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+        return { text: data.candidates[0].content.parts[0].text, engine: `Google Gemini (${model})` };
+      }
+    }
+    throw new Error('Gemini Failed');
+  }
+
+  async function callOpenAICompat(url, key, model, label, text) {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({
+        model: model,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: text }
+        ]
+      })
+    });
+    const data = await res.json();
+    if (data.choices && data.choices[0] && data.choices[0].message) {
+      return { text: data.choices[0].message.content, engine: label };
+    }
+    throw new Error(label + ' Failed');
+  }
+
+  async function callCohere(key, text) {
+    const res = await fetch('https://cohere.com', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({
+        model: 'command-a-03-2025',
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: text }
+        ]
+      })
+    });
+    const data = await res.json();
+    if (data.message && data.message.content && data.message.content[0]) {
+      return { text: data.message.content[0].text, engine: 'Cohere Command-A+' };
+    }
+    throw new Error('Cohere Failed');
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('question');
+    const text = input.value.trim();
+    const selectedMode = document.getElementById('activeEngine').value;
+
+    if (!text && !attachedImageBase64) return;
+
+    const keys = {};
+    keyIds.forEach(id => keys[id] = localStorage.getItem('sx_key_' + id));
+    const hasAnyKey = Object.values(keys).some(k => k && k.length > 5);
+
+    if (!hasAnyKey) {
+      alert('Please go to ⚙️ 8-AI Engines and save at least one free API Key first!');
+      return;
+    }
+
+    const s = sessions.find(x => x.id === currentSessionId);
+    const displayPrompt = attachedImageBase64 ? `📷 [Image Attached]\n${text}` : text;
+    if (s) {
+      if (s.messages.length === 0) s.title = (text || 'Image Analysis').slice(0, 28);
+      s.messages.push({ role: 'user', text: displayPrompt });
+    }
+
+    const imgCopy = attachedImageBase64;
+    const mimeCopy = attachedMimeType;
+    removeImage();
+    input.value = '';
+
+    const finalPrompt = webSearchOn
+      ? `[Web Search Mode Active - Provide latest 2026 verified context] ${text}`
+      : text;
+
+    if (s) s.messages.push({ role: 'ai', text: '⚡ Satyexa 8-AI Core is thinking...', engine: 'PROCESSING', loading: true });
+    renderSessions();
+    renderMessages();
+
+    const enginesOrder = selectedMode === 'auto'
+      ? ['gemini', 'cerebras', 'groq', 'openrouter', 'mistral', 'sambanova', 'github', 'cohere']
+      : [selectedMode];
+
+    let finalResponse = null;
+
+    for (let eng of enginesOrder) {
+      const k = keys[eng];
+      if (!k) continue;
+      try {
+        if (eng === 'gemini') finalResponse = await callGemini(k, finalPrompt || 'Describe this image', imgCopy, mimeCopy);
+        else if (eng === 'groq') finalResponse = await callOpenAICompat('https://api.groq.com/openai/v1/chat/completions', k, 'llama-3.3-70b-versatile', 'Groq Llama 3.3 70B', finalPrompt);
+        else if (eng === 'cerebras') finalResponse = await callOpenAICompat('https://cerebras.ai', k, 'llama-3.3-70b', 'Cerebras Super-Fast AI', finalPrompt);
+        else if (eng === 'openrouter') finalResponse = await callOpenAICompat('https://openrouter.ai', k, 'openrouter/free', 'OpenRouter Frontier Free', finalPrompt);
+        else if (eng === 'mistral') finalResponse = await callOpenAICompat('https://mistral.ai', k, 'mistral-small-latest', 'Mistral AI Latest', finalPrompt);
+        else if (eng === 'sambanova') finalResponse = await callOpenAICompat('https://sambanova.ai', k, 'Meta-Llama-3.3-70B-Instruct', 'SambaNova Cloud AI', finalPrompt);
+        else if (eng === 'github') finalResponse = await callOpenAICompat('https://azure.com', k, 'gpt-4o', 'GitHub Models GPT-4o', finalPrompt);
+        else if (eng === 'cohere') finalResponse = await callCohere(k, finalPrompt);
+
+        if (finalResponse) break;
+      } catch (e) {
+        console.warn(eng + ' failed, switching to next engine...');
+      }
+    }
+
+    if (s) {
+      s.messages.pop();
+      if (finalResponse) {
+        s.messages.push({ role: 'ai', text: finalResponse.text, engine: finalResponse.engine });
+      } else {
+        s.messages.push({ role: 'ai', text: '⚠️ API Key error or rate limit reached. Please check your keys in ⚙️ 8-AI Engines.', engine: 'SYSTEM ALERT' });
+      }
+    }
+
+    saveSessions();
+    renderMessages();
+  }
+
+  function generateImage() {
+    const prompt = document.getElementById('imgPrompt').value.trim();
+    if (!prompt) return alert('Please describe your image in English first!');
+    const resultDiv = document.getElementById('imageResult');
+    resultDiv.innerHTML = '<p class="small" style="margin-top:15px;">🎨 Satyexa Studio is generating your 8K artwork...</p>';
+    const imgUrl = `https://pollinations.ai{encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true`;
+    resultDiv.innerHTML = `<img src="${imgUrl}" alt="Satyexa Art"><br><a href="${imgUrl}" target="_blank" download="Satyexa-Art.jpg"><button class="btn-secondary" style="margin-top:10px;">⬇️ Download Full HD Image</button></a>`;
+  }
+</script>
+</body>
+</html>
