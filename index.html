@@ -12,31 +12,24 @@
   }
   * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
   body { margin: 0; background: radial-gradient(circle at top right, #0f172a, #030712 75%); color: var(--text); display: flex; flex-direction: column; min-height: 100vh; }
-
   header { padding: 13px 18px; background: rgba(6, 10, 22, 0.95); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
   .logo-area { display: flex; align-items: center; gap: 8px; }
   .logo { font-size: 20px; font-weight: 900; letter-spacing: 0.5px; background: linear-gradient(90deg, #10b981, #38bdf8, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
   .badge { font-size: 10px; background: rgba(16,185,129,0.15); color: #34d399; padding: 3px 8px; border-radius: 20px; border: 1px solid rgba(16,185,129,0.4); font-weight: 700; }
   .user-info { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
   .logout-btn { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.4); padding: 5px 10px; font-size: 11.5px; border-radius: 8px; cursor: pointer; font-weight: 600; }
-
   main { flex: 1; max-width: 900px; width: 100%; margin: auto; padding: 12px; }
   .card { background: var(--card); backdrop-filter: blur(18px); border: 1px solid var(--border); border-radius: 18px; padding: 18px; box-shadow: 0 20px 45px rgba(0,0,0,0.65); }
-
   input, textarea, select { width: 100%; padding: 11px 14px; margin: 6px 0 12px; background: #060a16; color: white; border: 1px solid #1e293b; border-radius: 11px; font-size: 14.5px; outline: none; transition: 0.2s; }
   input:focus, textarea:focus, select:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2); }
-
   button { background: linear-gradient(135deg, #059669, #0284c7); color: white; border: 0; padding: 11px 18px; border-radius: 11px; font-size: 14px; font-weight: 700; cursor: pointer; transition: 0.2s; }
   button:hover { opacity: 0.92; transform: translateY(-1px); }
   .btn-full { width: 100%; } .btn-secondary { background: #1e293b; border: 1px solid #334155; color: #e2e8f0; }
-
   nav { display: flex; gap: 6px; margin-bottom: 12px; background: var(--card); padding: 6px; border-radius: 14px; border: 1px solid var(--border); }
   nav button { flex: 1; background: transparent; color: var(--muted); padding: 9px; font-size: 13.5px; border-radius: 10px; }
   nav button.active { background: linear-gradient(135deg, #10b981, #2563eb); color: white; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); }
-
   .top-status { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
   .engine-select { width: auto; margin: 0; padding: 6px 10px; font-size: 12px; background: #0f172a; border-color: #334155; color: #38bdf8; font-weight: 600; }
-
   #messages { height: 54vh; overflow-y: auto; background: #040711; padding: 14px; border-radius: 14px; border: 1px solid #1e293b; display: flex; flex-direction: column; gap: 14px; }
   .msg-wrap { display: flex; flex-direction: column; max-width: 88%; }
   .msg-wrap.user-wrap { align-self: flex-end; }
@@ -45,26 +38,21 @@
   .user { background: linear-gradient(135deg, #059669, #0d9488); color: white; border-bottom-right-radius: 4px; }
   .ai { background: #0f172a; border: 1px solid #1e293b; border-left: 3px solid var(--cyan); border-bottom-left-radius: 4px; }
   .engine-tag { font-size: 10px; color: #38bdf8; font-weight: 700; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
-
   .msg-actions { display: flex; gap: 6px; margin-top: 5px; }
   .mini-btn { background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 3px 9px; font-size: 11px; border-radius: 6px; }
-
   .chat-tools { display: flex; gap: 6px; align-items: center; margin-top: 10px; }
   .icon-btn { background: #1e293b; border: 1px solid #334155; padding: 0 13px; height: 46px; font-size: 17px; display: flex; align-items: center; justify-content: center; }
   .icon-btn.recording { background: #dc2626; border-color: #ef4444; animation: pulse 1s infinite; }
   @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
   .chat-tools textarea { margin: 0; resize: none; height: 46px; flex: 1; }
   .send-btn { height: 46px; padding: 0 18px; background: linear-gradient(135deg, #10b981, #3b82f6); }
-
   #previewBox { display: flex; align-items: center; gap: 10px; margin-top: 8px; background: #0f172a; padding: 7px 12px; border-radius: 10px; border: 1px solid #334155; }
   #previewBox img { height: 42px; width: 42px; object-fit: cover; border-radius: 6px; }
   #imageResult img { width: 100%; max-height: 440px; object-fit: contain; border-radius: 14px; margin-top: 14px; border: 1px solid var(--border); }
-
   .key-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
   .key-box { background: #080d1d; padding: 10px; border-radius: 10px; border: 1px solid #1e293b; }
   .key-box label { font-size: 11.5px; color: #38bdf8; font-weight: 700; display: block; }
   .key-box input { margin: 5px 0 0; padding: 8px 10px; font-size: 12.5px; }
-
   .panel { display: none; } .panel.active { display: block; } .hidden { display: none !important; }
   .small { font-size: 12.5px; color: var(--muted); } .toggle-link { color: var(--accent); cursor: pointer; font-weight: 700; text-decoration: underline; }
   footer { text-align: center; color: #64748b; padding: 14px; font-size: 12px; border-top: 1px solid rgba(30,41,59,0.5); margin-top: 18px; }
@@ -72,8 +60,7 @@
 </style>
 </head>
 <body>
-
-<header>
+  <header>
   <div class="logo-area">
     <div class="logo">✦ SATYEXA AI</div>
     <span class="badge">GENESIS v10.0</span>
@@ -85,7 +72,6 @@
 </header>
 
 <main>
-  <!-- Login / Signup Section -->
   <section id="authSection" class="card" style="max-width: 420px; margin: 22px auto;">
     <h2 id="authTitle" style="margin-top:0;">🔐 Login to Satyexa AI</h2>
     <p class="small">8-Engine Frontier AI • Powered by <strong>Sadimx Technology</strong></p>
@@ -103,7 +89,6 @@
     </p>
   </section>
 
-  <!-- Main Workspace -->
   <section id="appSection" class="hidden">
     <nav>
       <button class="active" onclick="switchTab('chatTab', this)">💬 Smart AI Chat</button>
@@ -111,7 +96,6 @@
       <button onclick="switchTab('settingsTab', this)">⚙️ 8-AI Engines</button>
     </nav>
 
-    <!-- Chat Panel -->
     <div id="chatTab" class="panel active card">
       <div class="top-status">
         <select id="activeEngine" class="engine-select" onchange="localStorage.setItem('sx_active_engine', this.value)">
@@ -130,16 +114,360 @@
 
       <div id="messages"></div>
 
-      <!-- Image Attachment Preview -->
       <div id="previewBox" class="hidden">
         <img id="attachedPreview" src="" alt="Preview">
         <span class="small" style="flex:1;">Image attached (Gemini Vision Active)</span>
         <button class="mini-btn" onclick="removeImage()">❌ Remove</button>
       </div>
 
-      <!-- Input & Multimodal Controls -->
       <div class="chat-tools">
         <input type="file" id="visionInput" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
         <button class="icon-btn" title="Upload Image to Ask" onclick="document.getElementById('visionInput').click()">📷</button>
         <button class="icon-btn" id="micBtn" title="Voice Input (Bangla/English)" onclick="toggleVoice()">🎤</button>
-        
+        <textarea id="question" placeholder="Satyexa AI-কে যেকোনো প্রশ্ন করুন..." onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); sendMessage();}"></textarea>
+        <button class="send-btn" onclick="sendMessage()">Send ➤</button>
+      </div>
+    </div>
+
+    <div id="imageTab" class="panel card">
+      <h3 style="margin-top:0;">🎨 Satyexa Ultra HD Image Studio</h3>
+      <p class="small">Describe your imagination in English for instant 8K AI art generation.</p>
+      <textarea id="imgPrompt" rows="3" placeholder="Example: Futuristic neon Dhaka city at night, hyper realistic, 8k resolution..."></textarea>
+      <button class="btn-full" onclick="generateImage()">✨ Generate HD Artwork</button>
+      <div id="imageResult"></div>
+    </div>
+        <div id="settingsTab" class="panel card">
+      <h3 style="margin-top:0;">⚙️ 8-AI Frontier Engine Keys</h3>
+      <p class="small">যেকোনো ১টি বা সবগুলো ফ্রি API Key বসিয়ে সেভ করুন। একটির লিমিট শেষ হলে অটোমেটিক পরের ইঞ্জিন চালু হবে!</p>
+      
+      <div class="key-grid">
+        <div class="key-box">
+          <label>1. Google AI Studio (Gemini 3.8 Flash)</label>
+          <input type="password" id="k_gemini" placeholder="AIzaSy...">
+        </div>
+        <div class="key-box">
+          <label>2. Groq Cloud (Llama 3.3 70B)</label>
+          <input type="password" id="k_groq" placeholder="gsk_...">
+        </div>
+        <div class="key-box">
+          <label>3. Cerebras Cloud (Qwen 3.8 / Llama)</label>
+          <input type="password" id="k_cerebras" placeholder="csk-...">
+        </div>
+        <div class="key-box">
+          <label>4. OpenRouter (DeepSeek R1 Free)</label>
+          <input type="password" id="k_openrouter" placeholder="sk-or-v1-...">
+        </div>
+        <div class="key-box">
+          <label>5. Mistral AI (mistral-small-latest)</label>
+          <input type="password" id="k_mistral" placeholder="Mistral Key...">
+        </div>
+        <div class="key-box">
+          <label>6. SambaNova Cloud (GLM-5.3 / Llama)</label>
+          <input type="password" id="k_sambanova" placeholder="SambaNova Key...">
+        </div>
+        <div class="key-box">
+          <label>7. GitHub Models Token (GPT-4o)</label>
+          <input type="password" id="k_github" placeholder="ghp_...">
+        </div>
+        <div class="key-box">
+          <label>8. Cohere (Command-A+ / R+)</label>
+          <input type="password" id="k_cohere" placeholder="Cohere Key...">
+        </div>
+      </div>
+
+      <button class="btn-full" style="margin-top:14px;" onclick="saveAllKeys()">💾 Save All 8 AI Keys</button>
+      <p id="keyStatus" class="small" style="margin-top:10px; color:#10b981; font-weight:700;"></p>
+      <p class="small" style="margin-top:12px; border-top:1px solid #1e293b; padding-top:10px;">
+        <strong>Architecture & Ownership:</strong> Developed by <strong>Sadimx Technology</strong> • Owner & Founder: <strong>Sadim Molla</strong>.
+      </p>
+    </div>
+  </section>
+</main>
+
+<footer>Satyexa AI © 2026 • Powered by <strong>Sadimx Technology</strong> • Owner: <strong>Sadim Molla</strong></footer>
+
+<script>
+  let isSignup = false;
+  let chatHistory = JSON.parse(localStorage.getItem('sx_v10_chat') || '[]');
+  let attachedImageBase64 = null;
+  let attachedMimeType = null;
+
+  const SYSTEM_PROMPT = "You are Satyexa AI (Genesis Prime v10.0), an advanced next-generation AI created by Sadimx Technology. Your founder and owner is Sadim Molla. If anyone asks who created you, who owns you, or what your name is, proudly state that you are Satyexa AI, developed by Sadimx Technology and owned by Sadim Molla. Always give one clear, accurate, and helpful answer in the user's language (Bangla or English).";
+
+  const keyIds = ['gemini', 'groq', 'cerebras', 'openrouter', 'mistral', 'sambanova', 'github', 'cohere'];
+
+  window.onload = () => {
+    const savedUser = localStorage.getItem('sx_user');
+    if (savedUser) showApp(savedUser);
+    keyIds.forEach(id => {
+      document.getElementById('k_' + id).value = localStorage.getItem('sx_key_' + id) || '';
+    });
+    document.getElementById('activeEngine').value = localStorage.getItem('sx_active_engine') || 'auto';
+    renderMessages();
+  };
+
+  function toggleAuthMode() {
+    isSignup = !isSignup;
+    document.getElementById('authTitle').innerText = isSignup ? '📝 Create Satyexa Account' : '🔐 Login to Satyexa AI';
+    document.getElementById('authBtn').innerText = isSignup ? 'Create Account' : 'Login to Workspace';
+    document.getElementById('toggleText').innerText = isSignup ? 'Already have an account?' : 'New to Satyexa AI?';
+    document.getElementById('toggleBtn').innerText = isSignup ? 'Login' : 'Create Account';
+  }
+
+  function handleAuth() {
+    const u = document.getElementById('usernameInput').value.trim();
+    const p = document.getElementById('passwordInput').value.trim();
+    if (!u || !p) return alert('দয়া করে ইউজারনেম এবং পাসওয়ার্ড দিন!');
+    localStorage.setItem('sx_user', u);
+    showApp(u);
+  }
+
+  function showApp(user) {
+    document.getElementById('authSection').classList.add('hidden');
+    document.getElementById('appSection').classList.remove('hidden');
+    document.getElementById('userHeader').classList.remove('hidden');
+    document.getElementById('displayUser').innerText = '👤 ' + user;
+  }
+
+  function logout() {
+    localStorage.removeItem('sx_user');
+    location.reload();
+  }
+
+  function switchTab(tabId, btn) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  function saveAllKeys() {
+    keyIds.forEach(id => {
+      const val = document.getElementById('k_' + id).value.trim();
+      localStorage.setItem('sx_key_' + id, val);
+    });
+    document.getElementById('keyStatus').innerText = '✅ সবগুলো API Key সফলভাবে সেভ হয়েছে!';
+  }
+   function handleImageUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    attachedMimeType = file.type;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      attachedImageBase64 = e.target.result.split(',')[1];
+      document.getElementById('attachedPreview').src = e.target.result;
+      document.getElementById('previewBox').classList.remove('hidden');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function removeImage() {
+    attachedImageBase64 = null;
+    attachedMimeType = null;
+    document.getElementById('visionInput').value = '';
+    document.getElementById('previewBox').classList.add('hidden');
+  }
+
+  function toggleVoice() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return alert('আপনার ব্রাউজারে ভয়েস টাইপিং সাপোর্ট করছে না।');
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'bn-BD';
+    const micBtn = document.getElementById('micBtn');
+    micBtn.classList.add('recording');
+    recognition.start();
+    recognition.onresult = (event) => {
+      document.getElementById('question').value += event.results[0][0].transcript + ' ';
+      micBtn.classList.remove('recording');
+    };
+    recognition.onerror = () => micBtn.classList.remove('recording');
+    recognition.onend = () => micBtn.classList.remove('recording');
+  }
+
+  function speakText(index) {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(chatHistory[index].text);
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function copyText(index) {
+    navigator.clipboard.writeText(chatHistory[index].text);
+    alert('উত্তর কপি করা হয়েছে!');
+  }
+
+  function renderMessages() {
+    const box = document.getElementById('messages');
+    box.innerHTML = '';
+    if (chatHistory.length === 0) {
+      box.innerHTML = `<div class="msg-wrap ai-wrap"><div class="msg ai"><div class="engine-tag">✦ SATYEXA GENESIS PRIME v10.0</div>আসসালামু আলাইকুম! আমি <strong>Satyexa AI</strong> (নির্মাতা: <strong>Sadimx Technology</strong>, মালিক: <strong>Sadim Molla</strong>)। উপরে <strong>⚙️ 8-AI Engines</strong> ট্যাবে গিয়ে আপনার ফ্রি API Key সেট করুন এবং যেকোনো প্রশ্ন করুন!</div></div>`;
+      return;
+    }
+    chatHistory.forEach((m, idx) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'msg-wrap ' + (m.role === 'user' ? 'user-wrap' : 'ai-wrap');
+      const div = document.createElement('div');
+      div.className = 'msg ' + (m.role === 'user' ? 'user' : 'ai');
+      if (m.role === 'ai' && m.engine) {
+        div.innerHTML = `<div class="engine-tag">⚡ ${m.engine}</div>` + escapeHtml(m.text);
+      } else {
+        div.innerText = m.text;
+      }
+      wrap.appendChild(div);
+
+      if (m.role === 'ai' && !m.loading) {
+        const actions = document.createElement('div');
+        actions.className = 'msg-actions';
+        actions.innerHTML = `<button class="mini-btn" onclick="copyText(${idx})">📋 Copy</button>
+                             <button class="mini-btn" onclick="speakText(${idx})">🔊 Listen</button>`;
+        wrap.appendChild(actions);
+      }
+      box.appendChild(wrap);
+    });
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  function clearChatHistory() {
+    chatHistory = [];
+    localStorage.removeItem('sx_v10_chat');
+    renderMessages();
+  }
+
+  async function callGemini(key, text, imgBase64, mime) {
+    const parts = [];
+    if (text) parts.push({ text: text });
+    if (imgBase64) parts.push({ inline_data: { mime_type: mime, data: imgBase64 } });
+    const models = ['gemini-3.8-flash', 'gemini-2.5-flash'];
+    for (let model of models) {
+      const res = await fetch(`https://googleapis.com{model}:generateContent?key=${key}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+          contents: [{ role: 'user', parts: parts }]
+        })
+      });
+      const data = await res.json();
+      if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+        return { text: data.candidates[0].content.parts[0].text, engine: `Google Gemini (${model})` };
+      }
+    }
+    throw new Error('Gemini Failed');
+  }
+
+  async function callOpenAICompat(url, key, model, label, text) {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({
+        model: model,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: text }
+        ]
+      })
+    });
+    const data = await res.json();
+    if (data.choices && data.choices[0] && data.choices[0].message) {
+      return { text: data.choices[0].message.content, engine: label };
+    }
+    throw new Error(label + ' Failed');
+  }
+
+  async function callCohere(key, text) {
+    const res = await fetch('https://cohere.com', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({
+        model: 'command-a-03-2025',
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: text }
+        ]
+      })
+    });
+    const data = await res.json();
+    if (data.message && data.message.content && data.message.content[0]) {
+      return { text: data.message.content[0].text, engine: 'Cohere Command-A+' };
+    }
+    throw new Error('Cohere Failed');
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('question');
+    const text = input.value.trim();
+    const selectedMode = document.getElementById('activeEngine').value;
+
+    if (!text && !attachedImageBase64) return;
+
+    const keys = {};
+    keyIds.forEach(id => keys[id] = localStorage.getItem('sx_key_' + id));
+    const hasAnyKey = Object.values(keys).some(k => k && k.length > 5);
+
+    if (!hasAnyKey) {
+      alert('প্রথমে উপরে ⚙️ 8-AI Engines ট্যাবে গিয়ে অন্তত ১টি ফ্রি API Key সেভ করুন!');
+      return;
+    }
+
+    const displayPrompt = attachedImageBase64 ? `📷 [Image Attached]\n${text}` : text;
+    chatHistory.push({ role: 'user', text: displayPrompt });
+    
+    const imgCopy = attachedImageBase64;
+    const mimeCopy = attachedMimeType;
+    removeImage();
+    input.value = '';
+
+    chatHistory.push({ role: 'ai', text: '⚡ Satyexa 8-AI Core বিশ্লেষণ করছে...', engine: 'PROCESSING', loading: true });
+    renderMessages();
+
+    const enginesOrder = selectedMode === 'auto'
+      ? ['gemini', 'cerebras', 'groq', 'openrouter', 'mistral', 'sambanova', 'github', 'cohere']
+      : [selectedMode];
+
+    let finalResponse = null;
+
+    for (let eng of enginesOrder) {
+      const k = keys[eng];
+      if (!k) continue;
+      try {
+        if (eng === 'gemini') finalResponse = await callGemini(k, text || 'Describe this image', imgCopy, mimeCopy);
+        else if (eng === 'groq') finalResponse = await callOpenAICompat('https://api.groq.com/openai/v1/chat/completions', k, 'llama-3.3-70b-versatile', 'Groq Llama 3.3 70B', text);
+        else if (eng === 'cerebras') finalResponse = await callOpenAICompat('https://cerebras.ai', k, 'llama-3.3-70b', 'Cerebras Super-Fast AI', text);
+        else if (eng === 'openrouter') finalResponse = await callOpenAICompat('https://openrouter.ai', k, 'openrouter/free', 'OpenRouter Frontier Free', text);
+        else if (eng === 'mistral') finalResponse = await callOpenAICompat('https://mistral.ai', k, 'mistral-small-latest', 'Mistral AI Latest', text);
+        else if (eng === 'sambanova') finalResponse = await callOpenAICompat('https://sambanova.ai', k, 'Meta-Llama-3.3-70B-Instruct', 'SambaNova Cloud AI', text);
+        else if (eng === 'github') finalResponse = await callOpenAICompat('https://azure.com', k, 'gpt-4o', 'GitHub Models GPT-4o', text);
+        else if (eng === 'cohere') finalResponse = await callCohere(k, text);
+
+        if (finalResponse) break;
+      } catch (e) {
+        console.warn(eng + ' failed, switching to next engine...');
+      }
+    }
+
+    chatHistory.pop();
+
+    if (finalResponse) {
+      chatHistory.push({ role: 'ai', text: finalResponse.text, engine: finalResponse.engine });
+    } else {
+      chatHistory.push({ role: 'ai', text: '⚠️ আপনার দেওয়া API Key-গুলো কাজ করছে না অথবা লিমিট শেষ হয়েছে। দয়া করে ⚙️ 8-AI Engines ট্যাবে সঠিক Key চেক করুন।', engine: 'SYSTEM ALERT' });
+    }
+
+    localStorage.setItem('sx_v10_chat', JSON.stringify(chatHistory));
+    renderMessages();
+  }
+
+  function generateImage() {
+    const prompt = document.getElementById('imgPrompt').value.trim();
+    if (!prompt) return alert('ছবি তৈরির জন্য ইংরেজিতে বর্ণনা লিখুন!');
+    const resultDiv = document.getElementById('imageResult');
+    resultDiv.innerHTML = '<p class="small" style="margin-top:15px;">🎨 Satyexa Studio ছবি তৈরি করছে...</p>';
+    const imgUrl = `https://pollinations.ai{encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true`;
+    resultDiv.innerHTML = `<img src="${imgUrl}" alt="Satyexa Art"><br><a href="${imgUrl}" target="_blank" download="Satyexa-Art.jpg"><button class="btn-secondary" style="margin-top:10px;">⬇️ Download Full HD Image</button></a>`;
+  }
+</script>
+</body>
+</html>
