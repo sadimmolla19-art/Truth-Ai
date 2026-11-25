@@ -15,8 +15,15 @@ export default async function handler(req, res) {
       partnerKeys
     } = req.body;
 
-    const apiKey = process.env.GEMINI_KEY;
-    if (!apiKey) {
+    const geminiKeys = [
+      process.env.GEMINI_KEY,
+      process.env.GEMINI_KEY_2
+    ].filter(Boolean);
+
+    const groqKey = (partnerKeys && partnerKeys.groq) || process.env.GROQ_KEY;
+    const orKey = (partnerKeys && partnerKeys.openrouter) || process.env.OPENROUTER_KEY;
+
+    if (geminiKeys.length === 0) {
       return res.status(500).json({ error: 'GEMINI_KEY missing in Vercel' });
     }
 
@@ -34,6 +41,18 @@ export default async function handler(req, res) {
       "Automatically detect the language of the user's message and always respond fluently in that exact same language (English, Bengali, Hindi, Arabic, Spanish, French, etc.), unless the user explicitly asks to translate or reply in another language.\n" +
       (customPersona ? `User Custom Persona: ${customPersona}\n` : "") +
       (deepThink ? "CRITICAL: Perform deep, multi-step chain-of-thought reasoning before giving the final structured answer." : "Provide sharp, accurate, production-grade responses.");
+    async function fetchWithTimeout(url, options, timeoutMs = 15000) {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const response = await fetch(url, { ...options, signal: controller.signal });
+        clearTimeout(id);
+        return response;
+      } catch (err) {
+        clearTimeout(id);
+        throw err;
+      }
+    }
 
     async function callGemini(targetModel, promptText, useWeb = false) {
       const parts = [{ text: promptText }];
@@ -61,20 +80,26 @@ export default async function handler(req, res) {
       const chain = [...new Set([primary, 'gemini-2.5-flash', 'gemini-2.0-flash'])];
 
       let lastErr = '';
-      for (const m of chain) {
-        const r = await fetch(`${GEMINI_BASE}${m}:generateContent?key=${apiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const d = await r.json();
-        const firstCand = Array.isArray(d.candidates) ? d.candidates.at(0) : null;
-        const firstPart = firstCand && firstCand.content && Array.isArray(firstCand.content.parts) ? firstCand.content.parts.at(0) : null;
-        const txt = firstPart ? firstPart.text : '';
-        if (r.ok && txt) {
-          return { text: txt, used: m };
+      for (const activeKey of geminiKeys) {
+        for (const m of chain) {
+          try {
+            const r = await fetchWithTimeout(`${GEMINI_BASE}${m}:generateContent?key=${activeKey}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            }, 18000);
+            const d = await r.json();
+            const firstCand = Array.isArray(d.candidates) ? d.candidates.at(0) : null;
+            const firstPart = firstCand && firstCand.content && Array.isArray(firstCand.content.parts) ? firstCand.content.parts.at(0) : null;
+            const txt = firstPart ? firstPart.text : '';
+            if (r.ok && txt) {
+              return { text: txt, used: m };
+            }
+            lastErr = (d.error && d.error.message) || `HTTP ${r.status}`;
+          } catch (e) {
+            lastErr = e.message;
+          }
         }
-        lastErr = (d.error && d.error.message) || `HTTP ${r.status}`;
       }
       throw new Error(lastErr || 'Gemini API Error');
     }
@@ -82,7 +107,7 @@ export default async function handler(req, res) {
     async function callPartner(url, key, modelId, promptText) {
       if (!key) return null;
       try {
-        const r = await fetch(url, {
+        const r = await fetchWithTimeout(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
           body: JSON.stringify({
@@ -92,7 +117,7 @@ export default async function handler(req, res) {
               { role: 'user', content: promptText }
             ]
           })
-        });
+        }, 12000);
         const d = await r.json();
         const firstChoice = Array.isArray(d.choices) ? d.choices.at(0) : null;
         return (r.ok && firstChoice && firstChoice.message) ? firstChoice.message.content : null;
@@ -100,20 +125,19 @@ export default async function handler(req, res) {
         return null;
       }
     }
-
-    if (model === 'apex-god-mode') {
+        if (model === 'apex-god-mode') {
       const fullPrompt = `Conversation Context:\n${historyContext}\n\nCurrent Task: ${lastMsg}`;
       const tasks = [
         callGemini('gemini-2.5-pro', fullPrompt, webSearch),
         callGemini('gemini-2.5-flash', `Provide deep technical analysis and clear solution for:\n${lastMsg}`, false)
       ];
 
-      if (partnerKeys && partnerKeys.openrouter) {
-        tasks.push(callPartner(OR_URL, partnerKeys.openrouter, 'nvidia/nemotron-3-ultra-550b-a55b:free', lastMsg));
-        tasks.push(callPartner(OR_URL, partnerKeys.openrouter, 'particle-ai/particle-1:free', lastMsg));
+      if (orKey) {
+        tasks.push(callPartner(OR_URL, orKey, 'nvidia/nemotron-3-ultra-550b-a55b:free', lastMsg));
+        tasks.push(callPartner(OR_URL, orKey, 'particle-ai/particle-1:free', lastMsg));
       }
-      if (partnerKeys && partnerKeys.groq) {
-        tasks.push(callPartner(GROQ_URL, partnerKeys.groq, 'llama-3.3-70b-versatile', lastMsg));
+      if (groqKey) {
+        tasks.push(callPartner(GROQ_URL, groqKey, 'llama-3.3-70b-versatile', lastMsg));
       }
 
       const results = await Promise.allSettled(tasks);
@@ -126,7 +150,7 @@ export default async function handler(req, res) {
       }
 
       if (validAnswers.length === 0) {
-        return res.status(500).json({ error: 'All APEX engines are currently busy. Try again.' });
+        return res.status(500).json({ error: 'All APEX engines are currently busy. Check your API keys.' });
       }
 
       if (validAnswers.length === 1) {
@@ -141,7 +165,7 @@ export default async function handler(req, res) {
         `You are the Supreme Judge & Critic of Satyexa AI (created by Sadim Molla, Sadimx Technology).\n` +
         `User Query: "${lastMsg}"\n\n` +
         `Independent Expert Outputs:\n${formatted}\n\n` +
-        `TASK: Audit every output for bugs or missing details, merge the highest-IQ reasoning and cleanest code into ONE definitive response in the user's language without mentioning Engine numbers.`;
+        `TASK: Merge the highest-IQ reasoning and cleanest code into ONE definitive response in the user's language without mentioning Engine numbers.`;
 
       const finalOut = await callGemini('gemini-2.5-flash', judgePrompt, false);
       return res.status(200).json({
@@ -159,4 +183,4 @@ export default async function handler(req, res) {
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
-          }
+}
