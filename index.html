@@ -2,68 +2,81 @@
 <html lang="bn">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Satyexa AI • Apex Omega v5.0</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#030712">
+<title>Satyexa AI • Genesis Prime v10.0</title>
 <style>
   :root {
-    --bg: #03060c; --card: rgba(13, 20, 36, 0.92); --border: rgba(56, 189, 248, 0.28);
-    --accent: #10b981; --accent2: #3b82f6; --purple: #a855f7; --text: #f8fafc; --muted: #94a3b8;
+    --bg: #030712; --card: rgba(13, 20, 38, 0.9); --border: rgba(56, 189, 248, 0.3);
+    --accent: #10b981; --cyan: #06b6d4; --purple: #8b5cf6; --text: #f8fafc; --muted: #94a3b8;
   }
   * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
-  body { margin: 0; background: radial-gradient(circle at top right, #0f172a, #03060c 75%); color: var(--text); display: flex; flex-direction: column; min-height: 100vh; }
-  header { padding: 12px 18px; background: rgba(7, 11, 20, 0.95); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
-  .logo { font-size: 20px; font-weight: 800; background: linear-gradient(90deg, #10b981, #38bdf8, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-  .badge { font-size: 10px; background: rgba(168,85,247,0.18); color: #d8b4fe; padding: 3px 8px; border-radius: 20px; border: 1px solid rgba(168,85,247,0.4); font-weight: 700; }
-  .user-info { display: flex; align-items: center; gap: 8px; font-size: 12px; }
-  .logout-btn { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.4); padding: 5px 10px; font-size: 11px; border-radius: 8px; cursor: pointer; }
-  main { flex: 1; max-width: 920px; width: 100%; margin: auto; padding: 12px; }
+  body { margin: 0; background: radial-gradient(circle at top right, #0f172a, #030712 75%); color: var(--text); display: flex; flex-direction: column; min-height: 100vh; }
+
+  header { padding: 13px 18px; background: rgba(6, 10, 22, 0.95); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+  .logo-area { display: flex; align-items: center; gap: 8px; }
+  .logo { font-size: 20px; font-weight: 900; letter-spacing: 0.5px; background: linear-gradient(90deg, #10b981, #38bdf8, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .badge { font-size: 10px; background: rgba(16,185,129,0.15); color: #34d399; padding: 3px 8px; border-radius: 20px; border: 1px solid rgba(16,185,129,0.4); font-weight: 700; }
+  .user-info { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+  .logout-btn { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.4); padding: 5px 10px; font-size: 11.5px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+
+  main { flex: 1; max-width: 900px; width: 100%; margin: auto; padding: 12px; }
   .card { background: var(--card); backdrop-filter: blur(18px); border: 1px solid var(--border); border-radius: 18px; padding: 18px; box-shadow: 0 20px 45px rgba(0,0,0,0.65); }
-  input, textarea, select { width: 100%; padding: 11px 13px; margin: 5px 0 12px; background: #060a12; color: white; border: 1px solid #334155; border-radius: 12px; font-size: 14px; outline: none; transition: 0.2s; }
-  input:focus, textarea:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18); }
-  button { background: linear-gradient(135deg, #059669, #10b981); color: white; border: 0; padding: 10px 16px; border-radius: 11px; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+
+  input, textarea, select { width: 100%; padding: 11px 14px; margin: 6px 0 12px; background: #060a16; color: white; border: 1px solid #1e293b; border-radius: 11px; font-size: 14.5px; outline: none; transition: 0.2s; }
+  input:focus, textarea:focus, select:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2); }
+
+  button { background: linear-gradient(135deg, #059669, #0284c7); color: white; border: 0; padding: 11px 18px; border-radius: 11px; font-size: 14px; font-weight: 700; cursor: pointer; transition: 0.2s; }
   button:hover { opacity: 0.92; transform: translateY(-1px); }
   .btn-full { width: 100%; } .btn-secondary { background: #1e293b; border: 1px solid #334155; color: #e2e8f0; }
-  nav { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; background: var(--card); padding: 6px; border-radius: 14px; border: 1px solid var(--border); }
-  nav button { background: transparent; color: var(--muted); padding: 9px 4px; font-size: 12px; border-radius: 10px; }
-  nav button.active { background: linear-gradient(135deg, #059669, #0284c7); color: white; }
-  .control-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: space-between; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #1e293b; }
-  .control-bar select { width: auto; margin: 0; padding: 6px 10px; font-size: 12px; border-radius: 8px; }
-  .council-toggle { display: flex; align-items: center; gap: 6px; font-size: 12px; background: rgba(168,85,247,0.12); border: 1px solid rgba(168,85,247,0.4); padding: 5px 10px; border-radius: 8px; color: #e9d5ff; cursor: pointer; }
-  #messages { height: 52vh; overflow-y: auto; background: #050810; padding: 14px; border-radius: 14px; border: 1px solid #1e293b; display: flex; flex-direction: column; gap: 14px; }
-  .msg-wrap { display: flex; flex-direction: column; max-width: 90%; }
+
+  nav { display: flex; gap: 6px; margin-bottom: 12px; background: var(--card); padding: 6px; border-radius: 14px; border: 1px solid var(--border); }
+  nav button { flex: 1; background: transparent; color: var(--muted); padding: 9px; font-size: 13.5px; border-radius: 10px; }
+  nav button.active { background: linear-gradient(135deg, #10b981, #2563eb); color: white; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); }
+
+  .top-status { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  .engine-select { width: auto; margin: 0; padding: 6px 10px; font-size: 12px; background: #0f172a; border-color: #334155; color: #38bdf8; font-weight: 600; }
+
+  #messages { height: 54vh; overflow-y: auto; background: #040711; padding: 14px; border-radius: 14px; border: 1px solid #1e293b; display: flex; flex-direction: column; gap: 14px; }
+  .msg-wrap { display: flex; flex-direction: column; max-width: 88%; }
   .msg-wrap.user-wrap { align-self: flex-end; }
   .msg-wrap.ai-wrap { align-self: flex-start; }
-  .msg { padding: 13px 16px; border-radius: 15px; line-height: 1.65; font-size: 14.5px; overflow-wrap: anywhere; white-space: pre-wrap; }
+  .msg { padding: 12px 16px; border-radius: 15px; line-height: 1.65; font-size: 14.5px; overflow-wrap: anywhere; white-space: pre-wrap; }
   .user { background: linear-gradient(135deg, #059669, #0d9488); color: white; border-bottom-right-radius: 4px; }
-  .ai { background: #101726; border: 1px solid #1f2937; border-left: 3px solid var(--accent); border-bottom-left-radius: 4px; }
-  .ai.council-verdict { border-left: 3px solid var(--purple); background: linear-gradient(145deg, #131126, #0f172a); }
-  .engine-tag { font-size: 10.5px; color: #38bdf8; margin-bottom: 4px; font-weight: 600; display: flex; gap: 8px; align-items: center; }
+  .ai { background: #0f172a; border: 1px solid #1e293b; border-left: 3px solid var(--cyan); border-bottom-left-radius: 4px; }
+  .engine-tag { font-size: 10px; color: #38bdf8; font-weight: 700; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+
   .msg-actions { display: flex; gap: 6px; margin-top: 5px; }
-  .mini-btn { background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 3px 8px; font-size: 11px; border-radius: 6px; }
+  .mini-btn { background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 3px 9px; font-size: 11px; border-radius: 6px; }
+
   .chat-tools { display: flex; gap: 6px; align-items: center; margin-top: 10px; }
-  .icon-btn { background: #1e293b; border: 1px solid #334155; padding: 0 12px; height: 46px; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+  .icon-btn { background: #1e293b; border: 1px solid #334155; padding: 0 13px; height: 46px; font-size: 17px; display: flex; align-items: center; justify-content: center; }
   .icon-btn.recording { background: #dc2626; border-color: #ef4444; animation: pulse 1s infinite; }
-  @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+  @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
   .chat-tools textarea { margin: 0; resize: none; height: 46px; flex: 1; }
-  .send-btn { height: 46px; padding: 0 16px; background: linear-gradient(135deg, #10b981, #3b82f6); }
-  #previewBox { display: flex; align-items: center; gap: 10px; margin-top: 8px; background: #0f172a; padding: 8px 12px; border-radius: 10px; border: 1px solid #334155; }
+  .send-btn { height: 46px; padding: 0 18px; background: linear-gradient(135deg, #10b981, #3b82f6); }
+
+  #previewBox { display: flex; align-items: center; gap: 10px; margin-top: 8px; background: #0f172a; padding: 7px 12px; border-radius: 10px; border: 1px solid #334155; }
   #previewBox img { height: 42px; width: 42px; object-fit: cover; border-radius: 6px; }
-  .style-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
-  .chip { background: #1e293b; border: 1px solid #334155; color: #cbd5e1; padding: 5px 10px; border-radius: 20px; font-size: 11.5px; cursor: pointer; }
-  .chip.active { background: var(--accent); color: #03060c; font-weight: 700; border-color: var(--accent); }
-  #imageResult img { width: 100%; max-height: 450px; object-fit: contain; border-radius: 14px; margin-top: 14px; border: 1px solid var(--border); }
+  #imageResult img { width: 100%; max-height: 440px; object-fit: contain; border-radius: 14px; margin-top: 14px; border: 1px solid var(--border); }
+
+  .key-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+  .key-box { background: #080d1d; padding: 10px; border-radius: 10px; border: 1px solid #1e293b; }
+  .key-box label { font-size: 11.5px; color: #38bdf8; font-weight: 700; display: block; }
+  .key-box input { margin: 5px 0 0; padding: 8px 10px; font-size: 12.5px; }
+
   .panel { display: none; } .panel.active { display: block; } .hidden { display: none !important; }
-  .small { font-size: 12.5px; color: var(--muted); } .toggle-link { color: var(--accent); cursor: pointer; font-weight: 600; text-decoration: underline; }
-  footer { text-align: center; color: #64748b; padding: 14px; font-size: 11.5px; border-top: 1px solid rgba(30,41,59,0.5); margin-top: 18px; }
+  .small { font-size: 12.5px; color: var(--muted); } .toggle-link { color: var(--accent); cursor: pointer; font-weight: 700; text-decoration: underline; }
+  footer { text-align: center; color: #64748b; padding: 14px; font-size: 12px; border-top: 1px solid rgba(30,41,59,0.5); margin-top: 18px; }
   footer strong { color: #10b981; }
 </style>
 </head>
 <body>
 
 <header>
-  <div style="display:flex; align-items:center; gap:8px;">
+  <div class="logo-area">
     <div class="logo">✦ SATYEXA AI</div>
-    <span class="badge">OMEGA v5.0</span>
+    <span class="badge">GENESIS v10.0</span>
   </div>
   <div id="userHeader" class="user-info hidden">
     <span id="displayUser">User</span>
@@ -73,9 +86,9 @@
 
 <main>
   <!-- Login / Signup Section -->
-  <section id="authSection" class="card" style="max-width: 420px; margin: 25px auto;">
-    <h2 id="authTitle" style="margin-top:0;">🔐 Login to Satyexa Omega</h2>
-    <p class="small">5-Engine AI Council • Engineered by Sadim Molla</p>
+  <section id="authSection" class="card" style="max-width: 420px; margin: 22px auto;">
+    <h2 id="authTitle" style="margin-top:0;">🔐 Login to Satyexa AI</h2>
+    <p class="small">8-Engine Frontier AI • Powered by <strong>Sadimx Technology</strong></p>
     <label class="small">Username</label>
     <input type="text" id="usernameInput" placeholder="Enter your username">
     <label class="small">Password</label>
@@ -83,9 +96,9 @@
     <label class="small" style="display:flex; align-items:center; gap:8px; margin-bottom:14px;">
       <input type="checkbox" id="ageConfirm" style="width:auto; margin:0;" checked> I confirm that I am 18 years or older.
     </label>
-    <button class="btn-full" onclick="handleAuth()" id="authBtn">Access Omega Core</button>
-    <p class="small" style="text-align:center; margin-top:14px;">
-      <span id="toggleText">Don't have an account?</span> 
+    <button class="btn-full" onclick="handleAuth()" id="authBtn">Login to Workspace</button>
+    <p class="small" style="text-align:center; margin-top:15px;">
+      <span id="toggleText">New to Satyexa AI?</span> 
       <span class="toggle-link" onclick="toggleAuthMode()" id="toggleBtn">Create Account</span>
     </p>
   </section>
@@ -93,47 +106,40 @@
   <!-- Main Workspace -->
   <section id="appSection" class="hidden">
     <nav>
-      <button class="active" onclick="switchTab('chatTab', this)">💬 Neural Chat</button>
-      <button onclick="switchTab('imageTab', this)">🎨 Art Studio</button>
-      <button onclick="switchTab('memoryTab', this)">🧠 Memory Core</button>
-      <button onclick="switchTab('settingsTab', this)">⚙️ 5-AI Keys</button>
+      <button class="active" onclick="switchTab('chatTab', this)">💬 Smart AI Chat</button>
+      <button onclick="switchTab('imageTab', this)">🎨 Image Studio</button>
+      <button onclick="switchTab('settingsTab', this)">⚙️ 8-AI Engines</button>
     </nav>
 
     <!-- Chat Panel -->
     <div id="chatTab" class="panel active card">
-      <div class="control-bar">
-        <select id="personaSelect" title="Select AI Role">
-          <option value="neutral">⚖️ Neutral Fact-Checker & Judge</option>
-          <option value="coder">💻 Senior Software Architect</option>
-          <option value="analyst">📊 Deep Research Analyst</option>
-          <option value="creative">✨ Creative Genius</option>
+      <div class="top-status">
+        <select id="activeEngine" class="engine-select" onchange="localStorage.setItem('sx_active_engine', this.value)">
+          <option value="auto">⚡ Auto Best Engine (Smart Failover)</option>
+          <option value="gemini">1. Google Gemini 3.8 Flash</option>
+          <option value="groq">2. Groq (Llama 3.3 70B)</option>
+          <option value="cerebras">3. Cerebras (Qwen 3.8 / Llama)</option>
+          <option value="openrouter">4. OpenRouter (DeepSeek R1 Free)</option>
+          <option value="mistral">5. Mistral AI Latest</option>
+          <option value="sambanova">6. SambaNova (GLM-5.3 / Llama)</option>
+          <option value="github">7. GitHub Models (GPT-4o)</option>
+          <option value="cohere">8. Cohere (Command-A+)</option>
         </select>
-
-        <label class="council-toggle" title="All active AIs debate & declare 1 Winner">
-          <input type="checkbox" id="councilMode" style="width:auto; margin:0;">
-          <span>⚔️ AI Council Mode</span>
-        </label>
-
-        <div style="display:flex; gap:5px;">
-          <button class="btn-secondary" style="padding:5px 9px; font-size:11px;" onclick="exportChat()">📥 Save</button>
-          <button class="btn-secondary" style="padding:5px 9px; font-size:11px;" onclick="clearChatHistory()">🗑️</button>
-        </div>
-      </div>
-
-      <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-        <span class="small" id="activeStatus">⚡ 5-Engine Chain Ready</span>
-        <span class="small" id="memoryBadge">🧠 Memory: Active</span>
+        <button class="btn-secondary" style="padding:5px 10px; font-size:11.5px;" onclick="clearChatHistory()">🗑️ Clear Chat</button>
       </div>
 
       <div id="messages"></div>
 
-      <!-- Attachment Preview -->
+      <!-- Image Attachment Preview -->
       <div id="previewBox" class="hidden">
-        <img id="attachedPreview" src="" alt="Preview" class="hidden">
-        <span class="small" id="attachmentLabel" style="flex:1;">File attached</span>
-        <button class="mini-btn" onclick="removeAttachment()">❌</button>
+        <img id="attachedPreview" src="" alt="Preview">
+        <span class="small" style="flex:1;">Image attached (Gemini Vision Active)</span>
+        <button class="mini-btn" onclick="removeImage()">❌ Remove</button>
       </div>
 
       <!-- Input & Multimodal Controls -->
       <div class="chat-tools">
+        <input type="file" id="visionInput" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+        <button class="icon-btn" title="Upload Image to Ask" onclick="document.getElementById('visionInput').click()">📷</button>
+        <button class="icon-btn" id="micBtn" title="Voice Input (Bangla/English)" onclick="toggleVoice()">🎤</button>
         
