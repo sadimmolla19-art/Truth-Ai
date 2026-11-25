@@ -316,4 +316,143 @@
       list.appendChild(div);
     });
   }
+   function toggleAuthMode() {
+    isSignup = !isSignup;
+    document.getElementById('authTitle').innerText = isSignup ? '📝 Create Satyexa Account' : '🔐 Login to Satyexa AI';
+    document.getElementById('authBtn').innerText = isSignup ? 'Create Account' : 'Login to Workspace';
+    document.getElementById('toggleText').innerText = isSignup ? 'Already have an account?' : 'New to Satyexa AI?';
+    document.getElementById('toggleBtn').innerText = isSignup ? 'Login' : 'Create Account';
+  }
+
+  function handleAuth() {
+    const u = document.getElementById('usernameInput').value.trim();
+    const p = document.getElementById('passwordInput').value.trim();
+    if (!u || !p) return alert('Please enter both username and password!');
+    localStorage.setItem('sx_user', u);
+    showApp(u);
+  }
+
+  function showApp(user) {
+    document.getElementById('authSection').classList.add('hidden');
+    document.getElementById('appSection').classList.remove('hidden');
+    document.getElementById('userHeader').classList.remove('hidden');
+    document.getElementById('menuBtn').classList.remove('hidden');
+    document.getElementById('displayUser').innerText = '👤 ' + user;
+  }
+
+  function logout() {
+    localStorage.removeItem('sx_user');
+    location.reload();
+  }
+
+  function switchTab(tabId, btn) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  function saveAllKeys() {
+    keyIds.forEach(id => {
+      const val = document.getElementById('k_' + id).value.trim();
+      localStorage.setItem('sx_key_' + id, val);
+    });
+    document.getElementById('keyStatus').innerText = '✅ All API Keys saved securely on your device!';
+  }
+
+  function handleImageUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    attachedMimeType = file.type;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      attachedImageBase64 = e.target.result.split(',')[1];
+      document.getElementById('attachedPreview').src = e.target.result;
+      document.getElementById('previewBox').classList.remove('hidden');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function removeImage() {
+    attachedImageBase64 = null;
+    attachedMimeType = null;
+    document.getElementById('visionInput').value = '';
+    document.getElementById('previewBox').classList.add('hidden');
+  }
+
+  function toggleVoice() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return alert('Voice typing is not supported in this browser.');
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    const micBtn = document.getElementById('micBtn');
+    micBtn.classList.add('recording');
+    recognition.start();
+    recognition.onresult = (event) => {
+      document.getElementById('question').value += event.results[0][0].transcript + ' ';
+      micBtn.classList.remove('recording');
+    };
+    recognition.onerror = () => micBtn.classList.remove('recording');
+    recognition.onend = () => micBtn.classList.remove('recording');
+  }
+
+  function speakText(index) {
+    window.speechSynthesis.cancel();
+    const msgs = getActiveMessages();
+    const utterance = new SpeechSynthesisUtterance(msgs[index].text);
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function copyText(index) {
+    const msgs = getActiveMessages();
+    navigator.clipboard.writeText(msgs[index].text);
+    alert('Response copied to clipboard!');
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  function renderMessages() {
+    const box = document.getElementById('messages');
+    const msgs = getActiveMessages();
+    box.innerHTML = '';
+    if (msgs.length === 0) {
+      box.innerHTML = `<div class="msg-wrap ai-wrap"><div class="msg ai"><div class="engine-tag">✦ SATYEXA GENESIS PRIME v11.0</div>Welcome! I am <strong>Satyexa AI</strong> (Engineered by <strong>Sadimx Technology</strong>, Owned by <strong>Sadim Molla</strong>). Go to <strong>⚙️ 8-AI Engines</strong> to set your free API key and start asking!</div></div>`;
+      return;
+    }
+    msgs.forEach((m, idx) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'msg-wrap ' + (m.role === 'user' ? 'user-wrap' : 'ai-wrap');
+      const div = document.createElement('div');
+      div.className = 'msg ' + (m.role === 'user' ? 'user' : 'ai');
+      if (m.role === 'ai' && m.engine) {
+        div.innerHTML = `<div class="engine-tag">⚡ ${m.engine}</div>` + escapeHtml(m.text);
+      } else {
+        div.innerText = m.text;
+      }
+      wrap.appendChild(div);
+
+      if (m.role === 'ai' && !m.loading) {
+        const actions = document.createElement('div');
+        actions.className = 'msg-actions';
+        actions.innerHTML = `<button class="mini-btn" onclick="copyText(${idx})">📋 Copy</button>
+                             <button class="mini-btn" onclick="speakText(${idx})">🔊 Listen</button>`;
+        wrap.appendChild(actions);
+      }
+      box.appendChild(wrap);
+    });
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function clearChatHistory() {
+    const s = sessions.find(x => x.id === currentSessionId);
+    if (s) {
+      s.messages = [];
+      s.title = 'New Conversation';
+      saveSessions();
+      renderSessions();
+      renderMessages();
+    }
+  }
   
