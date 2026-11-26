@@ -1,3 +1,5 @@
+export const maxDuration = 60; // Vercel-কে ফ্রি-তেই ৬০ সেকেন্ড সময় দেওয়ার নির্দেশ
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -43,7 +45,7 @@ export default async function handler(req, res) {
       (customPersona ? `User Custom Persona: ${customPersona}\n` : "") +
       (deepThink ? "CRITICAL: Perform deep, multi-step chain-of-thought reasoning before giving the final structured answer." : "Provide sharp, accurate, production-grade responses.");
 
-    async function fetchWithTimeout(url, options, timeoutMs = 15000) {
+    async function fetchWithTimeout(url, options, timeoutMs = 8000) {
       const controller = new AbortController();
       const id = setTimeout(() => controller.abort(), timeoutMs);
       try {
@@ -72,17 +74,15 @@ export default async function handler(req, res) {
         payload.tools = [{ googleSearch: {} }];
       }
 
-      // নতুন সচল Gemini মডেলগুলোতে ম্যাপ করা হয়েছে
       const modelMap = {
-        'gemini-4-neon': 'gemini-3.8-pro',
-        'gemini-4-hydrogen': 'gemini-3.8-pro',
-        'gemini-4-carbon': 'gemini-3.8-pro',
+        'gemini-4-neon': 'gemini-3.8-flash',
+        'gemini-4-hydrogen': 'gemini-3.8-flash',
+        'gemini-4-carbon': 'gemini-3.8-flash',
         'gemini-4-argon': 'gemini-3.8-flash',
         'gemini-3.8-flash': 'gemini-3.8-flash'
       };
-      const primary = modelMap[targetModel] || targetModel || 'gemini-3.8-flash';
-      // পুরনো 2.0 এবং 2.5 বাদ দিয়ে নতুন সচল চেইন রাখা হয়েছে
-      const chain = [...new Set([primary, 'gemini-3.8-flash', 'gemini-3.0-flash', 'gemini-2.5-flash'])];
+      const primary = modelMap[targetModel] || 'gemini-3.8-flash';
+      const chain = [...new Set([primary, 'gemini-3.8-flash', 'gemini-2.5-flash'])];
 
       let lastErr = '';
       for (const activeKey of geminiKeys) {
@@ -92,7 +92,7 @@ export default async function handler(req, res) {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(payload)
-            }, 18000);
+            }, 9000);
             const d = await r.json();
             const firstCand = Array.isArray(d.candidates) ? d.candidates.at(0) : null;
             const firstPart = firstCand && firstCand.content && Array.isArray(firstCand.content.parts) ? firstCand.content.parts.at(0) : null;
@@ -122,7 +122,7 @@ export default async function handler(req, res) {
               { role: 'user', content: promptText }
             ]
           })
-        }, 12000);
+        }, 6000);
         const d = await r.json();
         const firstChoice = Array.isArray(d.choices) ? d.choices.at(0) : null;
         return (r.ok && firstChoice && firstChoice.message) ? firstChoice.message.content : null;
@@ -134,13 +134,12 @@ export default async function handler(req, res) {
     if (model === 'apex-god-mode') {
       const fullPrompt = `Conversation Context:\n${historyContext}\n\nCurrent Task: ${lastMsg}`;
       const tasks = [
-        callGemini('gemini-3.8-pro', fullPrompt, webSearch),
+        callGemini('gemini-3.8-flash', fullPrompt, webSearch),
         callGemini('gemini-3.8-flash', `Provide deep technical analysis and clear solution for:\n${lastMsg}`, false)
       ];
 
       if (orKey) {
         tasks.push(callPartner(OR_URL, orKey, 'meta-llama/llama-3.3-70b-instruct:free', lastMsg));
-        tasks.push(callPartner(OR_URL, orKey, 'google/gemma-3-27b-it:free', lastMsg));
       }
       if (groqKey) {
         tasks.push(callPartner(GROQ_URL, groqKey, 'llama-3.3-70b-versatile', lastMsg));
@@ -156,7 +155,9 @@ export default async function handler(req, res) {
       }
 
       if (validAnswers.length === 0) {
-        return res.status(500).json({ error: 'All APEX engines are currently busy. Check your API keys.' });
+        // সব ফেইল করলে কী এরর হয়েছে তা পরিষ্কার দেখাবে
+        const firstReason = results.find(r => r.status === 'rejected')?.reason?.message || 'All engines failed';
+        return res.status(500).json({ error: `APEX Error: ${firstReason}` });
       }
 
       if (validAnswers.length === 1) {
@@ -182,7 +183,7 @@ export default async function handler(req, res) {
       } catch {
         return res.status(200).json({
           reply: validAnswers.at(0),
-          usedModel: `APEX ENGINE (FALLBACK)`
+          usedModel: `APEX ENGINE (FAST)`
         });
       }
     }
@@ -196,4 +197,4 @@ export default async function handler(req, res) {
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
-                       }
+                      }
