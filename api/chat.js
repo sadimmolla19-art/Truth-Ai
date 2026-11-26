@@ -27,7 +27,7 @@ export default async function handler(req, res) {
     const orKey = (partnerKeys && partnerKeys.openrouter) || process.env.OPENROUTER_KEY || process.env.OPENROUTER_API_KEY;
 
     const P = "https:" + "//";
-    const GEMINI_BASE = P + ["generativelanguage", "googleapis", "com"].join(".") + "/v1beta/models/";
+    const GEMINI_ROOT = P + ["generativelanguage", "googleapis", "com"].join(".") + "/v1beta/models";
     const OR_URL = P + ["openrouter", "ai"].join(".") + "/api/v1/chat/completions";
     const GROQ_URL = P + ["api", "groq", "com"].join(".") + "/openai/v1/chat/completions";
 
@@ -41,7 +41,7 @@ export default async function handler(req, res) {
       (customPersona ? `User Custom Persona: ${customPersona}\n` : "") +
       (deepThink ? "CRITICAL: Perform deep, multi-step chain-of-thought reasoning before giving the final structured answer." : "Provide sharp, accurate, production-grade responses.");
 
-    async function fetchWithTimeout(url, options, timeoutMs = 8000) {
+    async function fetchWithTimeout(url, options, timeoutMs = 25000) {
       const controller = new AbortController();
       const id = setTimeout(() => controller.abort(), timeoutMs);
       try {
@@ -53,6 +53,8 @@ export default async function handler(req, res) {
         throw err;
       }
     }
+
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
     async function callPartner(url, key, modelId, promptText) {
       if (!key) return null;
@@ -67,7 +69,7 @@ export default async function handler(req, res) {
               { role: 'user', content: promptText }
             ]
           })
-        }, 7000);
+        }, 12000);
         const d = await r.json();
         const firstChoice = Array.isArray(d.choices) ? d.choices.at(0) : null;
         return (r.ok && firstChoice && firstChoice.message) ? firstChoice.message.content : null;
@@ -76,10 +78,28 @@ export default async function handler(req, res) {
       }
     }
 
+    // আপনার API Key-তে আসলেই কোন কোন মডেল চালু আছে তা অটোমেটিক খুঁজে বের করবে
+    async function getAvailableGeminiModels(apiKey) {
+      try {
+        const r = await fetchWithTimeout(`${GEMINI_ROOT}?key=${apiKey}`, { method: 'GET' }, 6000);
+        const d = await r.json();
+        if (r.ok && Array.isArray(d.models)) {
+          const valid = d.models
+            .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
+            .map(m => m.name.replace('models/', ''))
+            .filter(name => name.includes('gemini') && !name.includes('vision') && !name.includes('embedding') && !name.includes('2.0') && !name.includes('2.5'));
+          
+          // ফ্ল্যাশ মডেলগুলোকে আগে রাখবে যাতে দ্রুত উত্তর আসে
+          valid.sort((a, b) => (b.includes('flash') ? 1 : 0) - (a.includes('flash') ? 1 : 0));
+          if (valid.length > 0) return valid.slice(0, 4);
+        }
+      } catch {}
+      return ['gemini-3.8-flash', 'gemini-3.8-pro'];
+    }
+
     async function getGuaranteedAnswer(promptText, useWeb = false) {
       let debugErrors = [];
 
-      // লেয়ার ১, ২, ৩: Google Gemini চেইন
       if (geminiKeys.length > 0) {
         const parts = [{ text: promptText }];
         if (imageBase64) {
@@ -95,98 +115,90 @@ export default async function handler(req, res) {
           payload.tools = [{ googleSearch: {} }];
         }
 
-        const geminiModels = ['gemini-3.8-flash', 'gemini-3.8-flash-lite', 'gemini-3.0-flash'];
         for (const activeKey of geminiKeys) {
-          for (const m of geminiModels) {
-            try {
-              const r = await fetchWithTimeout(`${GEMINI_BASE}${m}:generateContent?key=${activeKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-              }, 8000);
-              const d = await r.json();
-              const firstCand = Array.isArray(d.candidates) ? d.candidates.at(0) : null;
-              const firstPart = firstCand && firstCand.content && Array.isArray(firstCand.content.parts) ? firstCand.content.parts.at(0) : null;
-              const txt = firstPart ? firstPart.text : '';
-              if (r.ok && txt) {
-                return { text: txt, used: m };
+          const liveModels = await getAvailableGeminiModels(activeKey);
+          for (const m of liveModels) {
+            // প্রতি মডেলের জন্য সর্বোচ্চ ২ বার চেষ্টা করবে (High demand এড়াতে)
+            for (let attempt = 1; attempt <= 2; attempt++) {
+              try {
+                const r = await fetchWithTimeout(`${GEMINI_ROOT}/${m}:generateContent?key=${activeKey}`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(payload)
+                }, 25000);
+                const d = await r.json();
+                const firstCand = Array.isArray(d.candidates) ? d.candidates.at(0) : null;
+                const firstPart = firstCand && firstCand.content && Array.isArray(firstCand.content.parts) ? firstCand.content.parts.at(0) : null;
+                const txt = firstPart ? firstPart.text : '';
+                if (r.ok && txt) {
+                  return { text: txt, used: m };
+                }
+                const errMsg = (d.error && d.error.message) || `HTTP ${r.status}`;
+                debugErrors.push(`${m}: ${errMsg}`);
+                // যদি মডেল ব্যস্ত (503/high demand) থাকে, ১.৫ সেকেন্ড অপেক্ষা করে আবার চেষ্টা করবে
+                if (r.status === 503 || errMsg.includes('demand') || errMsg.includes('overloaded')) {
+                  await sleep(1500);
+                  continue;
+                }
+                break; // অন্য এরর হলে পরের মডেলে যাবে
+              } catch (e) {
+                debugErrors.push(`${m}: ${e.message}`);
+                break;
               }
-              debugErrors.push(`${m}: ${(d.error && d.error.message) || r.status}`);
-            } catch (e) {
-              debugErrors.push(`${m}: ${e.message}`);
             }
           }
         }
       }
 
-      // লেয়ার ৪ ও ৫: Groq ব্যাকআপ
       if (groqKey) {
-        const groqModels = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
-        for (const gm of groqModels) {
+        for (const gm of ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant']) {
           const resText = await callPartner(GROQ_URL, groqKey, gm, promptText);
           if (resText) return { text: resText, used: gm };
         }
-        debugErrors.push('Groq failed');
       }
 
-      // লেয়ার ৬ ও ৭: OpenRouter ব্যাকআপ
       if (orKey) {
-        const orModels = ['meta-llama/llama-3.3-70b-instruct:free', 'google/gemma-3-27b-it:free'];
-        for (const om of orModels) {
+        for (const om of ['meta-llama/llama-3.3-70b-instruct:free', 'google/gemma-3-27b-it:free']) {
           const resText = await callPartner(OR_URL, orKey, om, promptText);
           if (resText) return { text: resText, used: om };
         }
-        debugErrors.push('OpenRouter failed');
       }
 
-      throw new Error(debugErrors.join(' | ') || 'No valid API keys');
+      throw new Error(debugErrors.slice(0, 2).join(' | ') || 'Servers temporarily busy, please try again.');
     }
 
     if (model === 'apex-god-mode') {
       const fullPrompt = `Conversation Context:\n${historyContext}\n\nCurrent Task: ${lastMsg}`;
-      
-      const tasks = [getGuaranteedAnswer(fullPrompt, webSearch)];
-      if (groqKey) tasks.push(callPartner(GROQ_URL, groqKey, 'llama-3.3-70b-versatile', lastMsg));
-      if (orKey) tasks.push(callPartner(OR_URL, orKey, 'meta-llama/llama-3.3-70b-instruct:free', lastMsg));
+      const mainOut = await getGuaranteedAnswer(fullPrompt, webSearch);
 
-      const results = await Promise.allSettled(tasks);
-      const validAnswers = [];
-      for (const r of results) {
-        if (r.status === 'fulfilled' && r.value) {
-          const val = typeof r.value === 'string' ? r.value : r.value.text;
-          if (val) validAnswers.push(val);
-        }
-      }
+      // ব্যাকগ্রাউন্ডে পার্টনার মডেল থাকলে তাও নেবে, না থাকলে মেইন উত্তরই সাথে সাথে দিয়ে দেবে
+      let extraAns = null;
+      if (groqKey) extraAns = await callPartner(GROQ_URL, groqKey, 'llama-3.3-70b-versatile', lastMsg);
+      if (!extraAns && orKey) extraAns = await callPartner(OR_URL, orKey, 'meta-llama/llama-3.3-70b-instruct:free', lastMsg);
 
-      if (validAnswers.length === 0) {
-        const firstReason = results.find(r => r.status === 'rejected')?.reason?.message || 'All engines busy';
-        return res.status(500).json({ error: firstReason });
-      }
-
-      if (validAnswers.length === 1) {
+      if (!extraAns) {
         return res.status(200).json({
-          reply: validAnswers.at(0),
-          usedModel: 'APEX ENGINE (ACTIVE)'
+          reply: mainOut.text,
+          usedModel: `APEX ENGINE • ${mainOut.used.toUpperCase()}`
         });
       }
 
-      const formatted = validAnswers.map((ans, idx) => `[Expert Engine ${idx + 1}]:\n${ans}`).join('\n\n====================\n\n');
       const judgePrompt =
         `You are the Supreme Judge & Critic of Satyexa AI (created by Sadim Molla, Sadimx Technology).\n` +
         `User Query: "${lastMsg}"\n\n` +
-        `Independent Expert Outputs:\n${formatted}\n\n` +
-        `TASK: Merge the highest-IQ reasoning and cleanest code into ONE definitive response in the user's language without mentioning Engine numbers.`;
+        `[Expert 1]:\n${mainOut.text}\n\n[Expert 2]:\n${extraAns}\n\n` +
+        `TASK: Merge the highest-IQ reasoning and cleanest code into ONE definitive response in the user's language without mentioning Expert numbers.`;
 
       try {
         const finalOut = await getGuaranteedAnswer(judgePrompt, false);
         return res.status(200).json({
           reply: finalOut.text,
-          usedModel: `APEX GOD-MODE (${validAnswers.length} Brains Merged)`
+          usedModel: `APEX GOD-MODE (2 Brains Merged)`
         });
       } catch {
         return res.status(200).json({
-          reply: validAnswers.at(0),
-          usedModel: `APEX ENGINE (INSTANT)`
+          reply: mainOut.text,
+          usedModel: `APEX ENGINE • ${mainOut.used.toUpperCase()}`
         });
       }
     }
@@ -200,4 +212,4 @@ export default async function handler(req, res) {
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
-}
+              }
