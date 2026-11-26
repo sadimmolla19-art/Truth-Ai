@@ -165,14 +165,16 @@ export default async function handler(req, res) {
       }
 
       if (groqKey) {
-        for (const gm of ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant']) {
+              for (const gm of ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'moonshotai/kimi-k2-instruct', 'qwen/qwen3-32b']) {
+                
           const resText = await callPartner(GROQ_URL, groqKey, gm, promptText);
           if (resText) return { text: resText, used: gm };
         }
       }
 
       if (orKey) {
-        for (const om of ['meta-llama/llama-3.3-70b-instruct:free', 'google/gemma-3-27b-it:free']) {
+              for (const om of ['meta-llama/llama-3.3-70b-instruct:free', 'google/gemma-3-27b-it:free', 'qwen/qwen3-coder:free', 'openrouter/free']) {
+                
           const resText = await callPartner(OR_URL, orKey, om, promptText);
           if (resText) return { text: resText, used: om };
         }
@@ -180,7 +182,32 @@ export default async function handler(req, res) {
 
       throw new Error(debugErrors.slice(0, 2).join(' | ') || 'Servers temporarily busy, please try again.');
     }
+    // Direct routing when user selects a specific model (1 to 20)
+    const directMap = {
+      'or-nemotron': ['openrouter', 'nvidia/nemotron-3-ultra:free'],
+      'or-gemma4': ['openrouter', 'google/gemma-3-27b-it:free'],
+      'or-particle': ['openrouter', 'deepseek/deepseek-r1:free'],
+      'groq-gptoss': ['groq', 'openai/gpt-oss-120b'],
+      'groq-llama': ['groq', 'llama-3.3-70b-versatile'],
+      'or-qwen-coder': ['openrouter', 'qwen/qwen3-coder:free'],
+      'groq-kimi-k2': ['groq', 'moonshotai/kimi-k2-instruct'],
+      'groq-qwen3': ['groq', 'qwen/qwen3-32b'],
+      'or-glm5': ['openrouter', 'zhipu/glm-5.3-flash:free'],
+      'or-auto-free': ['openrouter', 'openrouter/free']
+    };
 
+    if (model && directMap[model]) {
+      const [prov, mId] = directMap[model];
+      const apiUrl = prov === 'groq' ? GROQ_URL : OR_URL;
+      const apiKey = prov === 'groq' ? groqKey : orKey;
+      if (apiKey) {
+        const directAns = await callPartner(apiUrl, apiKey, mId, `Context:\n${historyContext}\n\nUser: ${lastMsg}`);
+        if (directAns) {
+          return res.status(200).json({ reply: directAns, usedModel: mId });
+        }
+      }
+    }
+    
     if (model === 'apex-god-mode') {
       const fullPrompt = `Conversation Context:\n${historyContext}\n\nCurrent Task: ${lastMsg}`;
       const mainOut = await getGuaranteedAnswer(fullPrompt, webSearch);
