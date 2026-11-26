@@ -97,12 +97,13 @@
   footer { text-align: center; color: #64748b; padding: 12px; font-size: 11.5px; border-top: 1px solid rgba(30,41,59,0.5); margin-top: 16px; }
   footer strong { color: #10b981; }
 </style>
-  <!-- Satyexa Math (KaTeX) & Code Highlighter -->
+<!-- Satyexa Math (KaTeX) & Code Highlighter -->
 <link rel="stylesheet" href="https://jsdelivr.net">
 <script defer src="https://jsdelivr.net"></script>
 <script defer src="https://jsdelivr.net"></script>
 <link rel="stylesheet" href="https://cloudflare.com">
 <script src="https://cloudflare.com"></script>
+  
   
 </head>
 <body>
@@ -210,6 +211,8 @@
         <div class="input-bottom-bar">
           <div class="left-tools">
             <input type="file" id="imageUpload" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+            <button class="icon-btn" onclick="document.getElementById('imageUpload').click()" title="Open Gallery">🖼️</button>
+            
             <button class="icon-btn" onclick="document.getElementById('imageUpload').click()" title="Upload Image">📷</button>
             <button id="micBtn" class="icon-btn" onclick="toggleVoice()" title="Voice Input">🎤</button>
           </div>
@@ -616,8 +619,27 @@
 </script>
   <script>
   window.satyexaMultiFiles = [];
+  let isFormatting = false;
 
-  // ১. ক্যামেরা বাটনকে একসাথে Multiple Image + PDF সাপোর্টে আপগ্রেড করা (লাইন ২০২-এর imageUpload)
+  // ১. মোবাইল ব্রাউজারে Listen বাটন সচল করা
+  window.speakText = function(encoded) {
+    if (!('speechSynthesis' in window)) {
+      alert('Voice output is not supported in this browser.');
+      return;
+    }
+    window.speechSynthesis.cancel();
+    let rawText = decodeURIComponent(encoded);
+    let cleanText = rawText
+      .replace(/```[\s\(\S\)]*?```/g, ' Code block skipped. ')
+      .replace(/[#*`$~_>]/g, '')
+      .trim();
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = /[\u0980-\u09FF]/.test(cleanText) ? 'bn-BD' : 'en-US';
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // ২. গ্যালারি ইনপুটকে Multiple Image + PDF সাপোর্টে আপগ্রেড করা
   function upgradeSatyexaUpload() {
     const input = document.getElementById('imageUpload');
     if (input && !input.dataset.upgraded) {
@@ -653,7 +675,7 @@
     }
   }
 
-  // ২. একাধিক ফাইল থাকলে তা /api/chat-এ পাঠানো
+  // ৩. একাধিক ফাইল থাকলে তা /api/chat-এ পাঠানো
   const origFetch = window.fetch;
   window.fetch = async function(url, options) {
     if (typeof url === 'string' && url.includes('/api/chat') && options && options.body) {
@@ -669,31 +691,60 @@
     return origFetch.apply(this, arguments);
   };
 
-  // ৩. ম্যাথ ফর্মুলা ($...$) ও কোড কালার সুন্দর করা
+  // ৪. প্রতিটি কোড বক্সে আলাদা "Copy Code" বাটন + ম্যাথ ফর্মুলা সুন্দর করা
   function formatMathAndCode() {
-    upgradeSatyexaUpload();
+    if (isFormatting) return;
+    isFormatting = true;
+    try {
+      upgradeSatyexaUpload();
+      const chatBox = document.getElementById('messages');
 
-    if (window.renderMathInElement) {
-      renderMathInElement(document.body, {
-        delimiters: [
-          { left: '$$', right: '$$', display: true },
-          { left: '$', right: '$', display: false }
-        ],
-        throwOnError: false
-      });
-    }
-
-    document.querySelectorAll('pre code').forEach((block) => {
-      if (!block.dataset.colored && window.hljs) {
-        block.dataset.colored = "true";
-        hljs.highlightElement(block);
+      if (chatBox && window.renderMathInElement) {
+        renderMathInElement(chatBox, {
+          delimiters: [
+            { left: '$$', right: '$$', display: true },
+            { left: '$', right: '$', display: false }
+          ],
+          throwOnError: false
+        });
       }
-    });
+
+      document.querySelectorAll('#messages pre code').forEach((block) => {
+        if (block.dataset.copyAdded) return;
+        block.dataset.copyAdded = "true";
+
+        if (window.hljs) hljs.highlightElement(block);
+
+        const pre = block.parentElement;
+        pre.style.position = 'relative';
+        pre.style.paddingTop = '36px';
+
+        const copyBtn = document.createElement('button');
+        copyBtn.type = 'button';
+        copyBtn.innerHTML = '📋 Copy Code';
+        copyBtn.style.cssText = 'position:absolute; top:6px; right:8px; background:#10b981; color:#fff; border:none; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; z-index:10;';
+
+        copyBtn.onclick = (e) => {
+          e.stopPropagation();
+          navigator.clipboard.writeText(block.innerText);
+          copyBtn.innerHTML = '✅ Copied!';
+          setTimeout(() => (copyBtn.innerHTML = '📋 Copy Code'), 2000);
+        };
+
+        pre.appendChild(copyBtn);
+      });
+    } finally {
+      setTimeout(() => { isFormatting = false; }, 300);
+    }
   }
 
-  const uiObserver = new MutationObserver(() => formatMathAndCode());
-  uiObserver.observe(document.body, { childList: true, subtree: true });
-  window.addEventListener('DOMContentLoaded', formatMathAndCode);
+  window.addEventListener('DOMContentLoaded', () => {
+    formatMathAndCode();
+    const msgBox = document.getElementById('messages');
+    if (msgBox) {
+      new MutationObserver(() => formatMathAndCode()).observe(msgBox, { childList: true });
+    }
+  });
   </script>
   
 </body>
