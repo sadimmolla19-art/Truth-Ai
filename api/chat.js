@@ -41,7 +41,7 @@ export default async function handler(req, res) {
       (customPersona ? `User Custom Persona: ${customPersona}\n` : "") +
       (deepThink ? "CRITICAL: Perform deep, multi-step chain-of-thought reasoning before giving the final structured answer." : "Provide sharp, accurate, production-grade responses.");
 
-    async function fetchWithTimeout(url, options, timeoutMs = 6000) {
+    async function fetchWithTimeout(url, options, timeoutMs = 8000) {
       const controller = new AbortController();
       const id = setTimeout(() => controller.abort(), timeoutMs);
       try {
@@ -67,7 +67,7 @@ export default async function handler(req, res) {
               { role: 'user', content: promptText }
             ]
           })
-        }, 6000);
+        }, 7000);
         const d = await r.json();
         const firstChoice = Array.isArray(d.choices) ? d.choices.at(0) : null;
         return (r.ok && firstChoice && firstChoice.message) ? firstChoice.message.content : null;
@@ -76,8 +76,9 @@ export default async function handler(req, res) {
       }
     }
 
-    // ৭-লেয়ার গ্যারান্টিড রেসপন্স ইঞ্জিন (কোনো লুপ ছাড়া, উত্তর আসবেই)
     async function getGuaranteedAnswer(promptText, useWeb = false) {
+      let debugErrors = [];
+
       // লেয়ার ১, ২, ৩: Google Gemini চেইন
       if (geminiKeys.length > 0) {
         const parts = [{ text: promptText }];
@@ -102,44 +103,48 @@ export default async function handler(req, res) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
-              }, 6000);
+              }, 8000);
               const d = await r.json();
-              const txt = d?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+              const firstCand = Array.isArray(d.candidates) ? d.candidates.at(0) : null;
+              const firstPart = firstCand && firstCand.content && Array.isArray(firstCand.content.parts) ? firstCand.content.parts.at(0) : null;
+              const txt = firstPart ? firstPart.text : '';
               if (r.ok && txt) {
                 return { text: txt, used: m };
               }
-            } catch {
-              // ব্যস্ত থাকলে পরের মডেলে চলে যাবে
+              debugErrors.push(`${m}: ${(d.error && d.error.message) || r.status}`);
+            } catch (e) {
+              debugErrors.push(`${m}: ${e.message}`);
             }
           }
         }
       }
 
-      // লেয়ার ৪ ও ৫: Groq সুপার-ফাস্ট ব্যাকআপ (যদি গুগল ব্যস্ত থাকে)
+      // লেয়ার ৪ ও ৫: Groq ব্যাকআপ
       if (groqKey) {
         const groqModels = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
         for (const gm of groqModels) {
           const resText = await callPartner(GROQ_URL, groqKey, gm, promptText);
           if (resText) return { text: resText, used: gm };
         }
+        debugErrors.push('Groq failed');
       }
 
-      // লেয়ার ৬ ও ৭: OpenRouter ফ্রি ব্যাকআপ
+      // লেয়ার ৬ ও ৭: OpenRouter ব্যাকআপ
       if (orKey) {
         const orModels = ['meta-llama/llama-3.3-70b-instruct:free', 'google/gemma-3-27b-it:free'];
         for (const om of orModels) {
           const resText = await callPartner(OR_URL, orKey, om, promptText);
           if (resText) return { text: resText, used: om };
         }
+        debugErrors.push('OpenRouter failed');
       }
 
-      throw new Error('All 7 backup layers are unreachable. Please check your API keys in Vercel.');
+      throw new Error(debugErrors.join(' | ') || 'No valid API keys');
     }
 
     if (model === 'apex-god-mode') {
       const fullPrompt = `Conversation Context:\n${historyContext}\n\nCurrent Task: ${lastMsg}`;
       
-      // সবগুলো ইঞ্জিন একসাথে চালাবে, যেগুলো দ্রুত উত্তর দেবে সেগুলো নেবে
       const tasks = [getGuaranteedAnswer(fullPrompt, webSearch)];
       if (groqKey) tasks.push(callPartner(GROQ_URL, groqKey, 'llama-3.3-70b-versatile', lastMsg));
       if (orKey) tasks.push(callPartner(OR_URL, orKey, 'meta-llama/llama-3.3-70b-instruct:free', lastMsg));
@@ -154,11 +159,8 @@ export default async function handler(req, res) {
       }
 
       if (validAnswers.length === 0) {
-        const fallback = await getGuaranteedAnswer(lastMsg, false);
-        return res.status(200).json({
-          reply: fallback.text,
-          usedModel: `APEX ENGINE (${fallback.used.toUpperCase()})`
-        });
+        const firstReason = results.find(r => r.status === 'rejected')?.reason?.message || 'All engines busy';
+        return res.status(500).json({ error: firstReason });
       }
 
       if (validAnswers.length === 1) {
@@ -168,7 +170,6 @@ export default async function handler(req, res) {
         });
       }
 
-      // একাধিক উত্তর পেলে মার্জ করার চেষ্টা করবে, ব্যস্ত থাকলে সেরা উত্তরটি সরাসরি দিয়ে দেবে
       const formatted = validAnswers.map((ans, idx) => `[Expert Engine ${idx + 1}]:\n${ans}`).join('\n\n====================\n\n');
       const judgePrompt =
         `You are the Supreme Judge & Critic of Satyexa AI (created by Sadim Molla, Sadimx Technology).\n` +
@@ -190,7 +191,6 @@ export default async function handler(req, res) {
       }
     }
 
-    // সাধারণ মডেল সিলেক্ট করলে ৭-লেয়ার ব্যাকআপসহ উত্তর দেবে
     const singleOut = await getGuaranteedAnswer(`Context:\n${historyContext}\n\nUser: ${lastMsg}`, webSearch);
     return res.status(200).json({
       reply: singleOut.text,
@@ -200,4 +200,4 @@ export default async function handler(req, res) {
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
-                          }
+}
