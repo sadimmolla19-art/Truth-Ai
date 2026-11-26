@@ -17,13 +17,14 @@ export default async function handler(req, res) {
 
     const geminiKeys = [
       process.env.GEMINI_KEY,
-      process.env.GEMINI_KEY_2
+      process.env.GEMINI_KEY_2,
+      process.env.GEMINI_API_KEY
     ].filter(Boolean);
 
-    const groqKey = (partnerKeys && partnerKeys.groq) || process.env.GROQ_KEY;
-    const orKey = (partnerKeys && partnerKeys.openrouter) || process.env.OPENROUTER_KEY;
+    const groqKey = (partnerKeys && partnerKeys.groq) || process.env.GROQ_KEY || process.env.GROQ_API_KEY;
+    const orKey = (partnerKeys && partnerKeys.openrouter) || process.env.OPENROUTER_KEY || process.env.OPENROUTER_API_KEY;
 
-    if (geminiKeys.length === 0) {
+    if (geminiKeys.length === 0 && !groqKey && !orKey) {
       return res.status(500).json({ error: 'GEMINI_KEY missing in Vercel' });
     }
 
@@ -41,6 +42,7 @@ export default async function handler(req, res) {
       "Automatically detect the language of the user's message and always respond fluently in that exact same language (English, Bengali, Hindi, Arabic, Spanish, French, etc.), unless the user explicitly asks to translate or reply in another language.\n" +
       (customPersona ? `User Custom Persona: ${customPersona}\n` : "") +
       (deepThink ? "CRITICAL: Perform deep, multi-step chain-of-thought reasoning before giving the final structured answer." : "Provide sharp, accurate, production-grade responses.");
+
     async function fetchWithTimeout(url, options, timeoutMs = 15000) {
       const controller = new AbortController();
       const id = setTimeout(() => controller.abort(), timeoutMs);
@@ -55,6 +57,7 @@ export default async function handler(req, res) {
     }
 
     async function callGemini(targetModel, promptText, useWeb = false) {
+      if (geminiKeys.length === 0) throw new Error('No Gemini Key');
       const parts = [{ text: promptText }];
       if (imageBase64) {
         const b64Data = imageBase64.includes(',') ? imageBase64.split(',').pop() : imageBase64;
@@ -69,15 +72,17 @@ export default async function handler(req, res) {
         payload.tools = [{ googleSearch: {} }];
       }
 
+      // নতুন সচল Gemini মডেলগুলোতে ম্যাপ করা হয়েছে
       const modelMap = {
-        'gemini-4-neon': 'gemini-2.5-pro',
-        'gemini-4-hydrogen': 'gemini-2.5-flash',
-        'gemini-4-carbon': 'gemini-2.5-pro',
-        'gemini-4-argon': 'gemini-2.0-flash',
-        'gemini-3.8-flash': 'gemini-2.5-flash'
+        'gemini-4-neon': 'gemini-3.8-pro',
+        'gemini-4-hydrogen': 'gemini-3.8-pro',
+        'gemini-4-carbon': 'gemini-3.8-pro',
+        'gemini-4-argon': 'gemini-3.8-flash',
+        'gemini-3.8-flash': 'gemini-3.8-flash'
       };
-      const primary = modelMap[targetModel] || targetModel || 'gemini-2.5-flash';
-      const chain = [...new Set([primary, 'gemini-2.5-flash', 'gemini-2.0-flash'])];
+      const primary = modelMap[targetModel] || targetModel || 'gemini-3.8-flash';
+      // পুরনো 2.0 এবং 2.5 বাদ দিয়ে নতুন সচল চেইন রাখা হয়েছে
+      const chain = [...new Set([primary, 'gemini-3.8-flash', 'gemini-3.0-flash', 'gemini-2.5-flash'])];
 
       let lastErr = '';
       for (const activeKey of geminiKeys) {
@@ -125,16 +130,17 @@ export default async function handler(req, res) {
         return null;
       }
     }
-        if (model === 'apex-god-mode') {
+
+    if (model === 'apex-god-mode') {
       const fullPrompt = `Conversation Context:\n${historyContext}\n\nCurrent Task: ${lastMsg}`;
       const tasks = [
-        callGemini('gemini-2.5-pro', fullPrompt, webSearch),
-        callGemini('gemini-2.5-flash', `Provide deep technical analysis and clear solution for:\n${lastMsg}`, false)
+        callGemini('gemini-3.8-pro', fullPrompt, webSearch),
+        callGemini('gemini-3.8-flash', `Provide deep technical analysis and clear solution for:\n${lastMsg}`, false)
       ];
 
       if (orKey) {
-        tasks.push(callPartner(OR_URL, orKey, 'nvidia/nemotron-3-ultra-550b-a55b:free', lastMsg));
-        tasks.push(callPartner(OR_URL, orKey, 'particle-ai/particle-1:free', lastMsg));
+        tasks.push(callPartner(OR_URL, orKey, 'meta-llama/llama-3.3-70b-instruct:free', lastMsg));
+        tasks.push(callPartner(OR_URL, orKey, 'google/gemma-3-27b-it:free', lastMsg));
       }
       if (groqKey) {
         tasks.push(callPartner(GROQ_URL, groqKey, 'llama-3.3-70b-versatile', lastMsg));
@@ -156,7 +162,7 @@ export default async function handler(req, res) {
       if (validAnswers.length === 1) {
         return res.status(200).json({
           reply: validAnswers.at(0),
-          usedModel: 'APEX ENGINE (GEMINI 2.5)'
+          usedModel: 'APEX ENGINE (GEMINI 3.8)'
         });
       }
 
@@ -167,11 +173,18 @@ export default async function handler(req, res) {
         `Independent Expert Outputs:\n${formatted}\n\n` +
         `TASK: Merge the highest-IQ reasoning and cleanest code into ONE definitive response in the user's language without mentioning Engine numbers.`;
 
-      const finalOut = await callGemini('gemini-2.5-flash', judgePrompt, false);
-      return res.status(200).json({
-        reply: finalOut.text,
-        usedModel: `APEX GOD-MODE (${validAnswers.length} Brains Merged)`
-      });
+      try {
+        const finalOut = await callGemini('gemini-3.8-flash', judgePrompt, false);
+        return res.status(200).json({
+          reply: finalOut.text,
+          usedModel: `APEX GOD-MODE (${validAnswers.length} Brains Merged)`
+        });
+      } catch {
+        return res.status(200).json({
+          reply: validAnswers.at(0),
+          usedModel: `APEX ENGINE (FALLBACK)`
+        });
+      }
     }
 
     const singleOut = await callGemini(model, `Context:\n${historyContext}\n\nUser: ${lastMsg}`, webSearch);
@@ -183,4 +196,4 @@ export default async function handler(req, res) {
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
-}
+                       }
