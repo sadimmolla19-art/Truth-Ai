@@ -1052,6 +1052,54 @@ async function executeSatyexaDeploy() {
   btn.disabled = true; btn.innerText = '⏳ Deploying...'; status.innerText = '';
 
   const token = document.getElementById('sd-u-token').value.trim();
+  const extra1 = document.getElementById('sd-u-extra1').value.trim();
+  const extra2 = document.getElementById('sd-u-extra2').value.trim();
+
+  const isInject = rawPlatform === 'github_inject';
+  const platform = isInject ? 'github' : rawPlatform;
+  const action = isInject ? 'smart_inject' : (platform === 'github' ? 'push_file' : (platform === 'vercel' ? 'deploy_vercel' : 'deploy_cf_worker'));
+
+  const payload = {
+    mode,
+    password: document.getElementById('sd-password').value,
+    platform,
+    action,
+    fileData: { path, content, projectName: extra2 || 'satyexa-app', workerName: extra2 || 'satyexa-worker' },
+    userConfig: {
+      ghToken: token, ghOwner: extra1, ghRepo: extra2,
+      vercelToken: token, cfToken: token, cfAccountId: extra1
+    },
+    customRequest: platform === 'universal' ? {
+      endpointUrl: extra1,
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      payload: content
+    } : null
+  };
+
+  try {
+    const res = await fetch('/api/deployer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.success) {
+      status.style.color = '#34d399';
+      status.innerText = '✅ ' + data.message + (data.liveUrl ? ' Live URL: ' + data.liveUrl : '');
+    } else {
+      status.style.color = '#f87171';
+      status.innerText = '❌ ' + (data.error || 'Deployment failed');
+    }
+  } catch (e) {
+    status.style.color = '#f87171';
+    status.innerText = '❌ Network Error: ' + e.message;
+  }
+  btn.disabled = false; btn.innerText = '🚀 Execute & Deploy';
+}
+</script>
+<!-- SATYEXA-MASTER-STUDIO-END -->
+  
   
   
 </body>
