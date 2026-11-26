@@ -17,8 +17,9 @@
   }
   * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
   body { margin: 0; background: radial-gradient(circle at top right, #0f172a, #030712 75%); color: var(--text); display: flex; flex-direction: column; min-height: 100vh; }
-html, body { max-width: 100%; overflow-x: hidden; min-height: 100dvh; display: flex; flex-direction: column; }
-main { flex: 1; display: flex; flex-direction: column; }
+    html, body { max-width: 100%; overflow-x: hidden; height: auto !important; min-height: 0 !important; }
+    body { display: block !important; padding-bottom: 10px; }
+  
   
   .logo-area { display: flex; align-items: center; gap: 8px; }
   .menu-btn { background: #1e293b; border: 1px solid #334155; color: #38bdf8; padding: 6px 10px; border-radius: 8px; font-size: 16px; cursor: pointer; }
