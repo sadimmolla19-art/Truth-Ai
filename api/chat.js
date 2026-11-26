@@ -107,6 +107,15 @@ export default async function handler(req, res) {
 
       if (geminiKeys.length > 0) {
         const parts = [{ text: promptText }];
+                if (Array.isArray(multiFiles) && multiFiles.length > 0) {
+          multiFiles.forEach(f => {
+            if (f.data) {
+              const b64 = f.data.includes(',') ? f.data.split(',').pop() : f.data;
+              parts.push({ inlineData: { mimeType: f.mimeType || "image/jpeg", data: b64 } });
+            }
+          });
+                }
+        
         if (imageBase64) {
           const b64Data = imageBase64.includes(',') ? imageBase64.split(',').pop() : imageBase64;
           parts.push({ inlineData: { mimeType: mimeType || "image/jpeg", data: b64Data } });
