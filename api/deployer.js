@@ -5,17 +5,16 @@ export default async function handler(req, res) {
 
   try {
     const {
-      mode, // 'admin' বা 'user'
+      mode,
       password,
-      platform, // 'github', 'vercel', 'cloudflare', 'netlify', বা 'universal'
-      userConfig, // ইউজারের যেকোনো অ্যাপের টোকেন ও কনফিগারেশন
-      fileData, // কোড, ফাইলের নাম, প্রজেক্টের নাম
-      customRequest // যেকোনো নতুন অ্যাপের জন্য ডাইনামিক API কল
+      platform,
+      userConfig,
+      fileData,
+      customRequest
     } = req.body;
 
     let config = {};
 
-    // ১. অ্যাডমিন নাকি ইউজার তা যাচাই করা
     if (mode === 'admin') {
       if (!password || password !== process.env.ADMIN_PASSWORD) {
         return res.status(401).json({ error: 'ভুল অ্যাডমিন পাসওয়ার্ড! অ্যাক্সেস বাতিল করা হয়েছে।' });
@@ -32,7 +31,6 @@ export default async function handler(req, res) {
       config = userConfig || {};
     }
 
-    // ২. GitHub অটো-কোডিং
     if (platform === 'github') {
       const { ghToken, ghOwner, ghRepo } = config;
       if (!ghToken || !ghOwner || !ghRepo) {
@@ -65,7 +63,6 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, message: `GitHub-এ ${fileData.path} আপডেট হয়েছে!`, url: result.content?.html_url });
     }
 
-    // ৩. Vercel লাইভ ডিপ্লয়
     if (platform === 'vercel') {
       if (!config.vercelToken) return res.status(400).json({ error: 'Vercel Token দেওয়া হয়নি!' });
       const vRes = await fetch('https://vercel.com', {
@@ -82,7 +79,6 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, message: 'Vercel-এ লাইভ হয়েছে!', liveUrl: `https://${vData.url}` });
     }
 
-    // ৪. Cloudflare Worker ডিপ্লয়
     if (platform === 'cloudflare') {
       if (!config.cfToken || !config.cfAccountId) return res.status(400).json({ error: 'Cloudflare Token বা Account ID দেওয়া হয়নি!' });
       const workerName = fileData.workerName || 'satyexa-worker';
@@ -92,11 +88,13 @@ export default async function handler(req, res) {
         body: fileData.content
       });
       const cfData = await cfRes.json();
-      if (!cfData.success) return res.status(400).json({ error: cfData.errors?.?.message });
+      if (!cfData.success) {
+        const errMsg = (cfData.errors && cfData.errors[0] && cfData.errors[0].message) ? cfData.errors[0].message : 'Cloudflare ডিপ্লয় ব্যর্থ হয়েছে';
+        return res.status(400).json({ error: errMsg });
+      }
       return res.status(200).json({ success: true, message: `Cloudflare Worker (${workerName}) ডিপ্লয় হয়েছে!` });
     }
 
-    // ৫. UNIVERSAL CONNECTOR (যেকোনো কোডিং অ্যাপ বা হোস্টিং API-এর জন্য)
     if (platform === 'universal' && customRequest) {
       const { endpointUrl, method, headers, payload } = customRequest;
       if (!endpointUrl) return res.status(400).json({ error: 'অ্যাপের API Endpoint URL দেওয়া হয়নি!' });
@@ -128,4 +126,4 @@ export default async function handler(req, res) {
   } catch (err) {
     return res.status(500).json({ error: 'সার্ভার এরর: ' + err.message });
   }
-    }
+}
