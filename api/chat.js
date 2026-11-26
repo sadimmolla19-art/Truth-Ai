@@ -88,6 +88,10 @@ export default async function handler(req, res) {
         }
       } catch (e) {}
                                         }
+        // 3. Smart Browser Automation, Auto-Fill Bookmarklet & Playwright Agent
+    if (/(form|fill|autofill|auto-fill|login|signup|sign up|create account|register|automation|bot|playwright|bookmarklet|ফর্ম|লগইন|অ্যাকাউন্ট)/i.test(lastMsg)) {
+      liveToolContext += `\n[BROWSER AUTOMATION & AUTO-FILL AGENT MODE ACTIVE]: The user wants to automate form filling, login, or account creation on a website. If a live webpage HTML/URL is provided above, inspect its exact <input> fields (name, id, type, placeholder). Provide TWO ready-to-use solutions: 1) A compact, 1-click Browser Auto-Fill Bookmarklet / Console JS snippet that automatically locates inputs, fills realistic or requested credentials, triggers 'input'/'change' events (for React/modern sites), and clicks submit. 2) A clean, ready-to-run Python Playwright automation script with human-like delays and clear setup instructions.\n`;
+    }
     
     const sysPrompt =
       "You are Satyexa AI (Genesis Prime v20.0 APEX), created and owned by Sadim Molla, Founder of Sadimx Technology. " +
