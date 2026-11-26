@@ -43,13 +43,13 @@ const browserlessKey = process.env.BROWSERLESS_KEY;
         let liveToolContext = "";
     const urlMatch = lastMsg.match(/https?:\/\/[^\s]+/i);
     
-    if (urlMatch) {
+            if (urlMatch) {
       const targetUrl = urlMatch;
       const isActionReq = /(create account|signup|sign up|register|login|fill|submit|অ্যাকাউন্ট|লগইন|ফর্ম)/i.test(lastMsg);
       const emailFound = (lastMsg.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/) || [null]) || "user" + Math.floor(Math.random()*9999) + "@example.com";
       const passFound = (lastMsg.match(/(?:pass|password|পাসওয়ার্ড)[:\s=]+([^\s,]+)/i) || [null, null]) || "Satyexa@" + Math.floor(1000 + Math.random()*9000);
       const nameFound = (lastMsg.match(/(?:name|নাম)[:\s=]+([a-zA-Z\s]{2,25})/i) || [null, null])?.trim() || "Sadim Molla";
-
+              
       let browserOutput = "";
       try {
         if (browserlessKey && isActionReq) {
