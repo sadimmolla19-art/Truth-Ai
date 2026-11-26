@@ -17,8 +17,9 @@
   }
   * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
   body { margin: 0; background: radial-gradient(circle at top right, #0f172a, #030712 75%); color: var(--text); display: flex; flex-direction: column; min-height: 100vh; }
-    html, body { max-width: 100%; overflow-x: hidden; height: auto !important; min-height: 0 !important; }
-    body { display: block !important; padding-bottom: 10px; }
+        html { overflow-x: hidden; overflow-y: auto; height: auto !important; }
+    body { max-width: 100%; overflow: hidden !important; height: auto !important; min-height: 0 !important; display: block !important; padding-bottom: 12px; }
+  
   
   
   .logo-area { display: flex; align-items: center; gap: 8px; }
