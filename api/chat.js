@@ -35,7 +35,56 @@ export default async function handler(req, res) {
 
     const lastMsg = (messages && messages.length > 0) ? messages[messages.length - 1].text : "Hello";
     const historyContext = (messages || []).slice(-6).map(m => `${m.role.toUpperCase()}: ${m.text}`).join('\n');
+    // ==============================================================
+    // LIVE TRADING MARKET ANALYZER & WEB READER AGENT
+    // ==============================================================
+    let liveToolContext = "";
 
+    // 1. Live Web Page / URL Reader Agent
+    const urlMatch = lastMsg.match(/https?:\/\/[^\s]+/i);
+    if (urlMatch) {
+      try {
+        const pageRes = await fetch(urlMatch[0], {
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SatyexaBot/1.0)' }
+        });
+        if (pageRes.ok) {
+          const rawHtml = await pageRes.text();
+          const cleanText = rawHtml
+            .replace(/<script[\s\S]*?<\/script>/gi, '')
+            .replace(/<style[\s\S]*?<\/style>/gi, '')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .slice(0, 4500);
+          liveToolContext += `\n[LIVE WEB PAGE CONTENT FROM ${urlMatch[0]}]:\n${cleanText}\n`;
+        }
+      } catch (e) {}
+    }
+
+    // 2. Live Crypto & Market Trading Data (Binance Public API - 100% Free)
+    const tradeKeywords = /\b(btc|bitcoin|eth|ethereum|sol|solana|bnb|xrp|doge|ton|ada|trx|trade|trading|crypto|signal|market|price|chart)\b/i;
+    if (tradeKeywords.test(lastMsg)) {
+      const coinMap = {
+        btc: 'BTCUSDT', bitcoin: 'BTCUSDT',
+        eth: 'ETHUSDT', ethereum: 'ETHUSDT',
+        sol: 'SOLUSDT', solana: 'SOLUSDT',
+        bnb: 'BNBUSDT', xrp: 'XRPUSDT',
+        doge: 'DOGEUSDT', ton: 'TONUSDT',
+        ada: 'ADAUSDT', trx: 'TRXUSDT'
+      };
+      let symbol = 'BTCUSDT';
+      for (const [k, v] of Object.entries(coinMap)) {
+        if (new RegExp(`\\b${k}\\b`, 'i').test(lastMsg)) { symbol = v; break; }
+      }
+      try {
+        const mRes = await fetch(`https://binance.com{symbol}`);
+        if (mRes.ok) {
+          const m = await mRes.json();
+          liveToolContext += `\n[LIVE MARKET DATA - ${symbol}]: Current Price: $${parseFloat(m.lastPrice).toFixed(4)}, 24h Change: ${m.priceChangePercent}%, 24h High: $${parseFloat(m.highPrice).toFixed(4)}, 24h Low: $${parseFloat(m.lowPrice).toFixed(4)}, 24h Volume: ${parseFloat(m.volume).toFixed(2)}. Analyze trend, support/resistance, and risk clearly (note: for educational analysis only).\n`;
+        }
+      } catch (e) {}
+        }
+    
     const sysPrompt =
       "You are Satyexa AI (Genesis Prime v20.0 APEX), created and owned by Sadim Molla, Founder of Sadimx Technology. " +
       "If anyone asks who created you or who your owner is, always proudly answer that you were created by Sadim Molla and Sadimx Technology. " +
@@ -201,21 +250,20 @@ export default async function handler(req, res) {
       const apiUrl = prov === 'groq' ? GROQ_URL : OR_URL;
       const apiKey = prov === 'groq' ? groqKey : orKey;
       if (apiKey) {
-        const directAns = await callPartner(apiUrl, apiKey, mId, `Context:\n${historyContext}\n\nUser: ${lastMsg}`);
+                const directAns = await callPartner(apiUrl, apiKey, mId, `Context:\n${historyContext}\n\nUser: ${lastMsg}${liveToolContext}`);
         if (directAns) {
           return res.status(200).json({ reply: directAns, usedModel: mId });
         }
       }
     }
-    
+
     if (model === 'apex-god-mode') {
-      const fullPrompt = `Conversation Context:\n${historyContext}\n\nCurrent Task: ${lastMsg}`;
+      const fullPrompt = `Conversation Context:\n${historyContext}\n\nCurrent Task: ${lastMsg}${liveToolContext}`;
       const mainOut = await getGuaranteedAnswer(fullPrompt, webSearch);
 
-      // ব্যাকগ্রাউন্ডে পার্টনার মডেল থাকলে তাও নেবে, না থাকলে মেইন উত্তরই সাথে সাথে দিয়ে দেবে
       let extraAns = null;
-      if (groqKey) extraAns = await callPartner(GROQ_URL, groqKey, 'llama-3.3-70b-versatile', lastMsg);
-      if (!extraAns && orKey) extraAns = await callPartner(OR_URL, orKey, 'meta-llama/llama-3.3-70b-instruct:free', lastMsg);
+      if (groqKey) extraAns = await callPartner(GROQ_URL, groqKey, 'llama-3.3-70b-versatile', `${lastMsg}${liveToolContext}`);
+      if (!extraAns && orKey) extraAns = await callPartner(OR_URL, orKey, 'meta-llama/llama-3.3-70b-instruct:free', `${lastMsg}${liveToolContext}`);
 
       if (!extraAns) {
         return res.status(200).json({
@@ -226,9 +274,9 @@ export default async function handler(req, res) {
 
       const judgePrompt =
         `You are the Supreme Judge & Critic of Satyexa AI (created by Sadim Molla, Sadimx Technology).\n` +
-        `User Query: "${lastMsg}"\n\n` +
+        `User Query: "${lastMsg}${liveToolContext}"\n\n` +
         `[Expert 1]:\n${mainOut.text}\n\n[Expert 2]:\n${extraAns}\n\n` +
-        `TASK: Merge the highest-IQ reasoning and cleanest code into ONE definitive response in the user's language without mentioning Expert numbers.`;
+        `TASK: Merge the highest-IQ reasoning and cleanest code into ONE definitive response in the user's language without extra fluff.`;
 
       try {
         const finalOut = await getGuaranteedAnswer(judgePrompt, false);
@@ -244,8 +292,8 @@ export default async function handler(req, res) {
       }
     }
 
-    const singleOut = await getGuaranteedAnswer(`Context:\n${historyContext}\n\nUser: ${lastMsg}`, webSearch);
-    return res.status(200).json({
+    const singleOut = await getGuaranteedAnswer(`Context:\n${historyContext}\n\nUser: ${lastMsg}${liveToolContext}`, webSearch);
+    
       reply: singleOut.text,
       usedModel: `SATYEXA • ${singleOut.used.toUpperCase()}`
     });
