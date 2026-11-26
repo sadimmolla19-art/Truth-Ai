@@ -65,7 +65,7 @@ export default async function handler(req, res) {
 
     if (platform === 'vercel') {
       if (!config.vercelToken) return res.status(400).json({ error: 'Vercel Token দেওয়া হয়নি!' });
-      const vRes = await fetch('https://vercel.com', {
+      const vRes = await fetch('https://api.vercel.com/v13/deployments, {
         method: 'POST',
         headers: { Authorization: `Bearer ${config.vercelToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
