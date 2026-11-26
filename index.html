@@ -97,6 +97,13 @@
   footer { text-align: center; color: #64748b; padding: 12px; font-size: 11.5px; border-top: 1px solid rgba(30,41,59,0.5); margin-top: 16px; }
   footer strong { color: #10b981; }
 </style>
+  <!-- Satyexa Math (KaTeX) & Code Highlighter -->
+<link rel="stylesheet" href="https://jsdelivr.net">
+<script defer src="https://jsdelivr.net"></script>
+<script defer src="https://jsdelivr.net"></script>
+<link rel="stylesheet" href="https://cloudflare.com">
+<script src="https://cloudflare.com"></script>
+  
 </head>
 <body>
   <div id="sandboxModal" class="sandbox-modal hidden">
@@ -607,6 +614,88 @@
     resDiv.innerHTML = '<img src="' + url + '" alt="Generated Art"><br><a href="' + url + '" download="satyexa-art.jpg" target="_blank"><button class="btn-full" style="margin-top:8px;">⬇ Download HD Image</button></a>';
   }
 </script>
+  <script>
+  window.satyexaMultiFiles = [];
+
+  // ১. ক্যামেরা বাটনকে একসাথে Multiple Image + PDF সাপোর্টে আপগ্রেড করা (লাইন ২০২-এর imageUpload)
+  function upgradeSatyexaUpload() {
+    const input = document.getElementById('imageUpload');
+    if (input && !input.dataset.upgraded) {
+      input.dataset.upgraded = "true";
+      input.setAttribute('multiple', 'multiple');
+      input.setAttribute('accept', 'image/*,.pdf,.txt,.py,.js,.html');
+
+      input.addEventListener('change', async (e) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+        window.satyexaMultiFiles = [];
+
+        for (const file of files) {
+          const dataUrl = await new Promise(res => {
+            const r = new FileReader();
+            r.onload = () => res(r.result);
+            r.readAsDataURL(file);
+          });
+          window.satyexaMultiFiles.push({
+            name: file.name,
+            mimeType: file.type || 'application/octet-stream',
+            data: dataUrl
+          });
+        }
+
+        const previewText = document.querySelector('#previewBox span');
+        if (previewText) {
+          previewText.textContent = files.length > 1
+            ? `📎 ${files.length} Files attached (Vision & Doc Ready)`
+            : `Image attached (Vision Ready)`;
+        }
+      });
+    }
+  }
+
+  // ২. একাধিক ফাইল থাকলে তা /api/chat-এ পাঠানো
+  const origFetch = window.fetch;
+  window.fetch = async function(url, options) {
+    if (typeof url === 'string' && url.includes('/api/chat') && options && options.body) {
+      try {
+        const bodyObj = JSON.parse(options.body);
+        if (window.satyexaMultiFiles && window.satyexaMultiFiles.length > 0) {
+          bodyObj.multiFiles = window.satyexaMultiFiles;
+          options.body = JSON.stringify(bodyObj);
+          window.satyexaMultiFiles = [];
+        }
+      } catch (e) {}
+    }
+    return origFetch.apply(this, arguments);
+  };
+
+  // ৩. ম্যাথ ফর্মুলা ($...$) ও কোড কালার সুন্দর করা
+  function formatMathAndCode() {
+    upgradeSatyexaUpload();
+
+    if (window.renderMathInElement) {
+      renderMathInElement(document.body, {
+        delimiters: [
+          { left: '$$', right: '$$', display: true },
+          { left: '$', right: '$', display: false }
+        ],
+        throwOnError: false
+      });
+    }
+
+    document.querySelectorAll('pre code').forEach((block) => {
+      if (!block.dataset.colored && window.hljs) {
+        block.dataset.colored = "true";
+        hljs.highlightElement(block);
+      }
+    });
+  }
+
+  const uiObserver = new MutationObserver(() => formatMathAndCode());
+  uiObserver.observe(document.body, { childList: true, subtree: true });
+  window.addEventListener('DOMContentLoaded', formatMathAndCode);
+  </script>
+  
 </body>
   <script>
   if ('serviceWorker' in navigator) {
