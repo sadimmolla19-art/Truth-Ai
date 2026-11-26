@@ -40,7 +40,8 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'GitHub Token, Username, or Repository name is missing!' });
       }
       const targetPath = (fileData.path || 'index.html').trim();
-      const apiUrl = `https://github.com{ghOwner}/${ghRepo}/contents/${targetPath}`;
+      const apiUrl = `https://api.github.com/repos/${ghOwner}/${ghRepo}/contents/${targetPath}`;
+      
       
       let sha = null;
       let existingContent = '';
@@ -111,7 +112,8 @@ export default async function handler(req, res) {
     // 3. VERCEL LIVE DEPLOYMENT
     if (platform === 'vercel') {
       if (!config.vercelToken) return res.status(400).json({ error: 'Vercel Access Token is missing!' });
-      const vRes = await fetch('https://vercel.com', {
+      const vRes = await fetch('https://api.vercel.com/v13/deployments', {
+        
         method: 'POST',
         headers: { Authorization: `Bearer ${config.vercelToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -129,7 +131,8 @@ export default async function handler(req, res) {
     if (platform === 'cloudflare') {
       if (!config.cfToken || !config.cfAccountId) return res.status(400).json({ error: 'Cloudflare Token or Account ID is missing!' });
       const workerName = fileData.workerName || 'satyexa-worker';
-      const cfRes = await fetch(`https://cloudflare.com{config.cfAccountId}/workers/scripts/${workerName}`, {
+      const cfRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${config.cfAccountId}/workers/scripts/${workerName}`, {
+        
         method: 'PUT',
         headers: { Authorization: `Bearer ${config.cfToken}`, 'Content-Type': 'application/javascript' },
         body: fileData.content
