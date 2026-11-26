@@ -293,7 +293,8 @@ export default async function handler(req, res) {
     }
 
     const singleOut = await getGuaranteedAnswer(`Context:\n${historyContext}\n\nUser: ${lastMsg}${liveToolContext}`, webSearch);
-    
+        return res.status(200).json({
+          
       reply: singleOut.text,
       usedModel: `SATYEXA • ${singleOut.used.toUpperCase()}`
     });
