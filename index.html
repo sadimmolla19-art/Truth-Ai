@@ -736,12 +736,38 @@
     }
   }
 
+
+  const btnStyle = document.createElement('style');
+  btnStyle.textContent = '.mini-btn, .icon-btn, button { user-select: none; -webkit-user-select: none; }';
+  document.head.appendChild(btnStyle);
+
+  window.isSpeakingNow = false;
+  window.activeSpeakBtn = null;
+
+  function resetSpeakUI() {
+    window.isSpeakingNow = false;
+    if (window.activeSpeakBtn) {
+      window.activeSpeakBtn.innerHTML = '🔊 Listen';
+      window.activeSpeakBtn.style.background = '';
+      window.activeSpeakBtn.style.color = '';
+      window.activeSpeakBtn = null;
+    }
+  }
+
   window.speakText = function(encoded) {
+    const clickedBtn = (typeof event !== 'undefined' && event.currentTarget) ? event.currentTarget : null;
+    const wasSameBtn = (window.isSpeakingNow && window.activeSpeakBtn === clickedBtn);
+
     if (window.currentAudio) {
       window.currentAudio.pause();
       window.currentAudio = null;
     }
-    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    resetSpeakUI();
+
+    if (wasSameBtn) return;
 
     let raw = decodeURIComponent(encoded);
     let clean = raw
@@ -751,28 +777,42 @@
       .trim();
     if (!clean) return;
 
+    window.isSpeakingNow = true;
+    if (clickedBtn) {
+      window.activeSpeakBtn = clickedBtn;
+      clickedBtn.innerHTML = '⏹️ Stop';
+      clickedBtn.style.background = '#ef4444';
+      clickedBtn.style.color = '#ffffff';
+    }
+
     let lang = 'en';
     if (/[\u0980-\u09FF]/.test(clean)) lang = 'bn';
     else if (/[\u0900-\u097F]/.test(clean)) lang = 'hi';
     else if (/[\u0600-\u06FF]/.test(clean)) lang = 'ar';
 
-    const voices = ('speechSynthesis' in window) ? window.speechSynthesis.getVoices() : [];
-    const hasVoice = voices.some(v => v.lang.toLowerCase().startsWith(lang));
+    setTimeout(() => {
+      const voices = ('speechSynthesis' in window) ? window.speechSynthesis.getVoices() : [];
+      const hasVoice = voices.some(v => v.lang.toLowerCase().startsWith(lang));
 
-    if (hasVoice && 'speechSynthesis' in window) {
-      window.speechSynthesis.resume();
-      const utter = new SpeechSynthesisUtterance(clean);
-      utter.lang = lang === 'bn' ? 'bn-BD' : (lang === 'hi' ? 'hi-IN' : (lang === 'ar' ? 'ar-SA' : 'en-US'));
-      utter.volume = 1.0;
-      window.speechSynthesis.speak(utter);
-    } else {
-      const ttsBase = atob("aHR0cHM6Ly90cmFuc2xhdGUuZ29vZ2xlLmNvbS90cmFuc2xhdGVfdHRzP2llPVVURi04JmNsaWVudD10dy1vYiZ0bD0=");
-      const ttsUrl = ttsBase + lang + "&q=" + encodeURIComponent(clean.slice(0, 200));
-      window.currentAudio = new Audio(ttsUrl);
-      window.currentAudio.play().catch(() => alert('Tap anywhere on screen once and press Listen again.'));
-    }
+      if (hasVoice && 'speechSynthesis' in window) {
+        window.speechSynthesis.resume();
+        const utter = new SpeechSynthesisUtterance(clean);
+        utter.lang = lang === 'bn' ? 'bn-BD' : (lang === 'hi' ? 'hi-IN' : (lang === 'ar' ? 'ar-SA' : 'en-US'));
+        utter.volume = 1.0;
+        utter.onend = resetSpeakUI;
+        utter.onerror = resetSpeakUI;
+        window.speechSynthesis.speak(utter);
+      } else {
+        const ttsBase = atob("aHR0cHM6Ly90cmFuc2xhdGUuZ29vZ2xlLmNvbS90cmFuc2xhdGVfdHRzP2llPVVURi04JmNsaWVudD10dy1vYiZ0bD0=");
+        const ttsUrl = ttsBase + lang + "&q=" + encodeURIComponent(clean.slice(0, 200));
+        window.currentAudio = new Audio(ttsUrl);
+        window.currentAudio.onended = resetSpeakUI;
+        window.currentAudio.onerror = resetSpeakUI;
+        window.currentAudio.play().catch(resetSpeakUI);
+      }
+    }, 100);
   };
-
+  
   ['galleryUpload', 'cameraUpload', 'imageUpload'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
