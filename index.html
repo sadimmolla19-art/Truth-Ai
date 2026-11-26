@@ -913,12 +913,11 @@
   });
 </script>
 <!-- SATYEXA-STUDIO-START -->
-<!-- SATYEXA QUICK TOOLS WIDGET TEST -->
-<button id="satyexa-tools-btn" onclick="document.getElementById('satyexa-tools-box').style.display = document.getElementById('satyexa-tools-box').style.display === 'none' ? 'block' : 'none'" style="position:fixed;bottom:85px;left:18px;z-index:9998;background:linear-gradient(135deg,#8b5cf6,#ec4899);color:#fff;border:none;border-radius:50px;padding:10px 15px;font-weight:bold;font-size:13px;box-shadow:0 4px 15px rgba(236,72,153,0.4);cursor:pointer;">
+<button id="satyexa-tools-btn" onclick="document.getElementById('satyexa-tools-box').style.display = document.getElementById('satyexa-tools-box').style.display === 'none' ? 'block' : 'none'" style="position:fixed;bottom:18px;left:16px;z-index:99999;background:linear-gradient(135deg,#8b5cf6,#ec4899);color:#fff;border:none;border-radius:50px;padding:10px 15px;font-weight:bold;font-size:13px;box-shadow:0 4px 15px rgba(236,72,153,0.4);cursor:pointer;">
   🛠️ Quick Tools
 </button>
 
-<div id="satyexa-tools-box" style="display:none;position:fixed;bottom:135px;left:18px;z-index:9998;width:270px;background:#111827;border:1px solid #374151;border-radius:14px;padding:14px;color:#fff;font-family:sans-serif;box-shadow:0 10px 25px rgba(0,0,0,0.7);">
+<div id="satyexa-tools-box" style="display:none;position:fixed;bottom:70px;left:16px;z-index:99999;width:270px;background:#111827;border:1px solid #374151;border-radius:14px;padding:14px;color:#fff;font-family:sans-serif;box-shadow:0 10px 25px rgba(0,0,0,0.7);">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
     <span style="font-weight:bold;color:#f472b6;font-size:14px;">🧮 Quick Calc & Scratchpad</span>
     <button onclick="document.getElementById('satyexa-tools-box').style.display='none'" style="background:none;border:none;color:#9ca3af;cursor:pointer;font-size:16px;">✕</button>
@@ -930,8 +929,135 @@
   <textarea rows="3" placeholder="Quick developer notes..." style="width:100%;box-sizing:border-box;padding:7px;background:#1f2937;border:1px solid #374151;border-radius:6px;color:#fff;font-size:12px;"></textarea>
 </div>
 
-<!-- SATYEXA-STUDIO-END -->
+<button id="satyexa-deploy-fab" onclick="toggleDeployModal()" style="position:fixed;bottom:18px;right:16px;z-index:99999;background:linear-gradient(135deg,#00f2fe,#4facfe);color:#000;border:none;border-radius:50px;padding:10px 16px;font-weight:bold;font-size:13px;box-shadow:0 4px 15px rgba(0,242,254,0.4);cursor:pointer;">
+  ⚡ Deploy Studio
+</button>
+
+<div id="satyexa-deploy-modal" style="display:none;position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,0.88);backdrop-filter:blur(6px);padding:15px;overflow-y:auto;font-family:sans-serif;color:#fff;">
+  <div style="max-width:500px;margin:20px auto;background:#111827;border:1px solid #374151;border-radius:14px;padding:18px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <h3 style="margin:0;color:#38bdf8;font-size:17px;">🚀 Satyexa Universal Coder & Deployer</h3>
+      <button onclick="toggleDeployModal()" style="background:none;border:none;color:#9ca3af;font-size:20px;cursor:pointer;">✕</button>
+    </div>
+
+    <label style="font-size:12px;color:#9ca3af;">Access Mode:</label>
+    <select id="sd-mode" onchange="toggleSdFields()" style="width:100%;padding:9px;margin:5px 0 10px;background:#1f2937;color:#fff;border:1px solid #374151;border-radius:8px;">
+      <option value="user">🌐 User Mode (Connect Any GitHub / Vercel / CF / Custom App)</option>
+      <option value="admin">👑 Admin Mode (Owner Access - Password Locked)</option>
+    </select>
+
+    <div id="sd-admin-box" style="display:none;">
+      <input id="sd-password" type="password" placeholder="Enter Admin Password..." style="width:100%;box-sizing:border-box;padding:9px;margin-bottom:10px;background:#1f2937;color:#fff;border:1px solid #374151;border-radius:8px;">
+    </div>
+
+    <label style="font-size:12px;color:#9ca3af;">Target Platform & Action:</label>
+    <select id="sd-platform" onchange="toggleSdFields()" style="width:100%;padding:9px;margin:5px 0 10px;background:#1f2937;color:#fff;border:1px solid #374151;border-radius:8px;">
+      <option value="github_inject">✨ GitHub Smart Auto-Inject (Auto-place snippet into file)</option>
+      <option value="github">📄 GitHub Full File (Create new or overwrite entire file)</option>
+      <option value="vercel">▲ Vercel (Instant Live Website Deployment)</option>
+      <option value="cloudflare">☁️ Cloudflare (Deploy Worker Script)</option>
+      <option value="universal">🔌 Universal Custom API (Any Coding/Hosting App)</option>
+    </select>
+
+    <div id="sd-user-box" style="display:block;background:#1f2937;padding:10px;border-radius:8px;margin-bottom:10px;">
+      <input id="sd-u-token" type="password" placeholder="Your API / Personal Access Token" style="width:100%;box-sizing:border-box;padding:8px;margin-bottom:6px;background:#111827;color:#fff;border:1px solid #374151;border-radius:6px;">
+      <input id="sd-u-extra1" type="text" placeholder="GitHub Username / CF Account ID / Custom App API URL" style="width:100%;box-sizing:border-box;padding:8px;margin-bottom:6px;background:#111827;color:#fff;border:1px solid #374151;border-radius:6px;">
+      <input id="sd-u-extra2" type="text" placeholder="Repository Name / Project Name (If applicable)" style="width:100%;box-sizing:border-box;padding:8px;background:#111827;color:#fff;border:1px solid #374151;border-radius:6px;">
+    </div>
+
+    <input id="sd-filepath" type="text" value="index.html" placeholder="Target File Path (e.g., index.html, api/chat.js)" style="width:100%;box-sizing:border-box;padding:9px;margin-bottom:8px;background:#1f2937;color:#fff;border:1px solid #374151;border-radius:8px;">
+    <textarea id="sd-code" rows="6" placeholder="Paste code snippet, full file, or JSON payload here..." style="width:100%;box-sizing:border-box;padding:9px;margin-bottom:10px;background:#1f2937;color:#10b981;font-family:monospace;border:1px solid #374151;border-radius:8px;"></textarea>
+
+    <button onclick="executeSatyexaDeploy()" id="sd-btn" style="width:100%;padding:11px;background:#10b981;color:#000;font-weight:bold;border:none;border-radius:8px;cursor:pointer;">🚀 Execute & Deploy</button>
+    <div id="sd-status" style="margin-top:10px;font-size:12px;color:#fbbf24;word-break:break-all;"></div>
+  </div>
+</div>
+
+<div id="satyexa-preview-modal" style="display:none;position:fixed;inset:0;z-index:100001;background:rgba(0,0,0,0.92);padding:12px;font-family:sans-serif;">
+  <div style="max-width:900px;height:90vh;margin:10px auto;background:#111827;border:1px solid #374151;border-radius:12px;display:flex;flex-direction:column;overflow:hidden;">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#1f2937;border-bottom:1px solid #374151;">
+      <span style="color:#38bdf8;font-weight:bold;font-size:14px;">👁️ Satyexa Live Sandbox Preview</span>
+      <button onclick="document.getElementById('satyexa-preview-modal').style.display='none'" style="background:#ef4444;color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-weight:bold;">Close ✕</button>
+    </div>
+    <iframe id="satyexa-preview-frame" style="flex:1;width:100%;border:none;background:#fff;"></iframe>
+  </div>
+</div>
+
+<script>
+function toggleDeployModal(prefillCode) {
+  const m = document.getElementById('satyexa-deploy-modal');
+  if (typeof prefillCode === 'string') {
+    document.getElementById('sd-code').value = prefillCode;
+    m.style.display = 'block';
+    return;
+  }
+  m.style.display = m.style.display === 'none' ? 'block' : 'none';
+}
+function toggleSdFields() {
+  const mode = document.getElementById('sd-mode').value;
+  document.getElementById('sd-admin-box').style.display = mode === 'admin' ? 'block' : 'none';
+  document.getElementById('sd-user-box').style.display = mode === 'user' ? 'block' : 'none';
+}
+function openLivePreview(code) {
+  document.getElementById('satyexa-preview-modal').style.display = 'block';
+  document.getElementById('satyexa-preview-frame').srcdoc = code;
+}
+
+setInterval(() => {
+  document.querySelectorAll('pre').forEach(pre => {
+    if (pre.dataset.sdHooked === 'true') return;
+    pre.dataset.sdHooked = 'true';
+    const codeEl = pre.querySelector('code');
+    if (!codeEl) return;
+
+    const bar = document.createElement('div');
+    bar.style.cssText = 'display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;';
+
+    const prevBtn = document.createElement('button');
+    prevBtn.type = 'button';
+    prevBtn.innerText = '👁️ Live Preview';
+    prevBtn.style.cssText = 'background:#3b82f6;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:bold;cursor:pointer;';
+    prevBtn.onclick = () => openLivePreview(codeEl.innerText);
+
+    const depBtn = document.createElement('button');
+    depBtn.type = 'button';
+    depBtn.innerText = '⚡ Send to Deploy';
+    depBtn.style.cssText = 'background:#10b981;color:#000;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:bold;cursor:pointer;';
+    depBtn.onclick = () => toggleDeployModal(codeEl.innerText);
+
+    bar.appendChild(prevBtn);
+    bar.appendChild(depBtn);
+    pre.appendChild(bar);
+  });
+}, 1000);
+
+async function executeSatyexaDeploy() {
+  const btn = document.getElementById('sd-btn');
+  const status = document.getElementById('sd-status');
+  const mode = document.getElementById('sd-mode').value;
+  const rawPlatform = document.getElementById('sd-platform').value;
+  const path = document.getElementById('sd-filepath').value.trim();
+  const content = document.getElementById('sd-code').value;
+
+  if (!content) { status.innerText = '⚠️ Please enter or paste code first!'; return; }
+  btn.disabled = true; btn.innerText = '⏳ Deploying...'; status.innerText = '';
+
+  const token = document.getElementById('sd-u-token').value.trim();
+  const extra1 = document.getElementById('sd-u-extra1').value.trim();
   
+  #satyexa-deploy-fab {
+    display: inline-block !important;
+    position: fixed !important;
+    bottom: 20px !important;
+    right: 16px !important;
+    z-index: 99999 !important;
+  }
+  #satyexa-tools-btn {
+    bottom: 20px !important;
+    left: 16px !important;
+    z-index: 99999 !important;
+  }
+</style>
   
 </body>
   <script>
