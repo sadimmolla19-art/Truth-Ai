@@ -912,6 +912,126 @@
     }
   });
 </script>
+  <!-- SATYEXA AI UNIVERSAL AUTO-DEPLOY STUDIO & CHAT COMMAND -->
+<button id="satyexa-deploy-fab" onclick="toggleDeployModal()" style="position:fixed;bottom:85px;right:18px;z-index:9999;background:linear-gradient(135deg,#00f2fe,#4facfe);color:#000;border:none;border-radius:50px;padding:10px 16px;font-weight:bold;font-size:13px;box-shadow:0 4px 15px rgba(0,242,254,0.4);cursor:pointer;">
+  ⚡ Deploy Studio
+</button>
+
+<div id="satyexa-deploy-modal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.85);backdrop-filter:blur(6px);padding:15px;overflow-y:auto;font-family:sans-serif;color:#fff;">
+  <div style="max-width:480px;margin:20px auto;background:#111827;border:1px solid #374151;border-radius:14px;padding:18px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <h3 style="margin:0;color:#38bdf8;font-size:17px;">🚀 Satyexa Universal Coder & Deployer</h3>
+      <button onclick="toggleDeployModal()" style="background:none;border:none;color:#9ca3af;font-size:20px;cursor:pointer;">✕</button>
+    </div>
+
+    <label style="font-size:12px;color:#9ca3af;">মোড সিলেক্ট করুন:</label>
+    <select id="sd-mode" onchange="toggleSdFields()" style="width:100%;padding:9px;margin:5px 0 10px;background:#1f2937;color:#fff;border:1px solid #374151;border-radius:8px;">
+      <option value="admin">👑 Admin Mode (Sadim Molla - পাসওয়ার্ড লক)</option>
+      <option value="user">🌐 User Mode (নিজের GitHub/Vercel/CF/যেকোনো অ্যাপ)</option>
+    </select>
+
+    <div id="sd-admin-box">
+      <input id="sd-password" type="password" placeholder="Admin Password দিন..." style="width:100%;box-sizing:border-box;padding:9px;margin-bottom:10px;background:#1f2937;color:#fff;border:1px solid #374151;border-radius:8px;">
+    </div>
+
+    <label style="font-size:12px;color:#9ca3af;">প্ল্যাটফর্ম সিলেক্ট করুন:</label>
+    <select id="sd-platform" onchange="toggleSdFields()" style="width:100%;padding:9px;margin:5px 0 10px;background:#1f2937;color:#fff;border:1px solid #374151;border-radius:8px;">
+      <option value="github">GitHub (ফাইল তৈরি / কোড আপডেট)</option>
+      <option value="vercel">Vercel (সরাসরি লাইভ ওয়েবসাইট)</option>
+      <option value="cloudflare">Cloudflare (Worker স্ক্রিপ্ট ডিপ্লয়)</option>
+      <option value="universal">🔌 Universal Custom App (যেকোনো অ্যাপের API)</option>
+    </select>
+
+    <div id="sd-user-box" style="display:none;background:#1f2937;padding:10px;border-radius:8px;margin-bottom:10px;">
+      <input id="sd-u-token" type="password" placeholder="আপনার API / Access Token দিন" style="width:100%;box-sizing:border-box;padding:8px;margin-bottom:6px;background:#111827;color:#fff;border:1px solid #374151;border-radius:6px;">
+      <input id="sd-u-extra1" type="text" placeholder="GitHub Username / CF Account ID / Custom API URL" style="width:100%;box-sizing:border-box;padding:8px;margin-bottom:6px;background:#111827;color:#fff;border:1px solid #374151;border-radius:6px;">
+      <input id="sd-u-extra2" type="text" placeholder="Repo Name / Project Name (প্রয়োজন হলে)" style="width:100%;box-sizing:border-box;padding:8px;background:#111827;color:#fff;border:1px solid #374151;border-radius:6px;">
+    </div>
+
+    <input id="sd-filepath" type="text" value="index.html" placeholder="ফাইলের নাম (যেমন: index.html বা api/test.js)" style="width:100%;box-sizing:border-box;padding:9px;margin-bottom:8px;background:#1f2937;color:#fff;border:1px solid #374151;border-radius:8px;">
+    <textarea id="sd-code" rows="6" placeholder="এখানে AI-এর তৈরি কোড বা JSON পেস্ট করুন..." style="width:100%;box-sizing:border-box;padding:9px;margin-bottom:10px;background:#1f2937;color:#10b981;font-family:monospace;border:1px solid #374151;border-radius:8px;"></textarea>
+
+    <button onclick="executeSatyexaDeploy()" id="sd-btn" style="width:100%;padding:11px;background:#10b981;color:#000;font-weight:bold;border:none;border-radius:8px;cursor:pointer;">🚀 কোড পুশ ও ডিপ্লয় করুন</button>
+    <div id="sd-status" style="margin-top:10px;font-size:12px;color:#fbbf24;word-break:break-all;"></div>
+  </div>
+</div>
+
+<script>
+function toggleDeployModal() {
+  const m = document.getElementById('satyexa-deploy-modal');
+  m.style.display = m.style.display === 'none' ? 'block' : 'none';
+}
+function toggleSdFields() {
+  const mode = document.getElementById('sd-mode').value;
+  document.getElementById('sd-admin-box').style.display = mode === 'admin' ? 'block' : 'none';
+  document.getElementById('sd-user-box').style.display = mode === 'user' ? 'block' : 'none';
+}
+async function executeSatyexaDeploy() {
+  const btn = document.getElementById('sd-btn');
+  const status = document.getElementById('sd-status');
+  const mode = document.getElementById('sd-mode').value;
+  const platform = document.getElementById('sd-platform').value;
+  const path = document.getElementById('sd-filepath').value.trim();
+  const content = document.getElementById('sd-code').value;
+
+  if (!content) { status.innerText = '⚠️ অনুগ্রহ করে কোড লিখুন বা পেস্ট করুন!'; return; }
+  btn.disabled = true; btn.innerText = '⏳ প্রসেসিং হচ্ছে...'; status.innerText = '';
+
+  const token = document.getElementById('sd-u-token').value.trim();
+  const extra1 = document.getElementById('sd-u-extra1').value.trim();
+  const extra2 = document.getElementById('sd-u-extra2').value.trim();
+
+  const payload = {
+    mode,
+    password: document.getElementById('sd-password').value,
+    platform,
+    action: platform === 'github' ? 'push_file' : (platform === 'vercel' ? 'deploy_vercel' : 'deploy_cf_worker'),
+    fileData: { path, content, projectName: extra2 || 'satyexa-app', workerName: extra2 || 'satyexa-worker' },
+    userConfig: {
+      ghToken: token, ghOwner: extra1, ghRepo: extra2,
+      vercelToken: token, cfToken: token, cfAccountId: extra1
+    },
+    customRequest: platform === 'universal' ? {
+      endpointUrl: extra1,
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      payload: content
+    } : null
+  };
+
+  try {
+    const res = await fetch('/api/deployer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.success) {
+      status.style.color = '#34d399';
+      status.innerText = '✅ ' + data.message + (data.liveUrl ? ' লিংক: ' + data.liveUrl : '');
+    } else {
+      status.style.color = '#f87171';
+      status.innerText = '❌ ' + (data.error || 'ব্যর্থ হয়েছে');
+    }
+  } catch (e) {
+    status.style.color = '#f87171';
+    status.innerText = '❌ নেটওয়ার্ক এরর: ' + e.message;
+  }
+  btn.disabled = false; btn.innerText = '🚀 কোড পুশ ও ডিপ্লয় করুন';
+}
+
+// চ্যাট ইনপুটে "/deploy" লিখলে সরাসরি Deploy Studio ওপেন হওয়ার শর্টকাট
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && e.target && (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT')) {
+    const val = e.target.value.trim();
+    if (val.startsWith('/deploy')) {
+      e.preventDefault();
+      e.target.value = '';
+      toggleDeployModal();
+    }
+  }
+});
+    </script>
   
 </body>
   <script>
