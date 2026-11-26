@@ -27,7 +27,8 @@ export default async function handler(req, res) {
 
     const groqKey = (partnerKeys && partnerKeys.groq) || process.env.GROQ_KEY || process.env.GROQ_API_KEY;
     const orKey = (partnerKeys && partnerKeys.openrouter) || process.env.OPENROUTER_KEY || process.env.OPENROUTER_API_KEY;
-
+const browserlessKey = process.env.BROWSERLESS_KEY;
+    
     const P = "https:" + "//";
     const GEMINI_ROOT = P + ["generativelanguage", "googleapis", "com"].join(".") + "/v1beta/models";
     const OR_URL = P + ["openrouter", "ai"].join(".") + "/api/v1/chat/completions";
@@ -41,17 +42,69 @@ export default async function handler(req, res) {
 
         let liveToolContext = "";
     const urlMatch = lastMsg.match(/https?:\/\/[^\s]+/i);
+    
     if (urlMatch) {
+      const targetUrl = urlMatch;
+      const isActionReq = /(create account|signup|sign up|register|login|fill|submit|অ্যাকাউন্ট|লগইন|ফর্ম)/i.test(lastMsg);
+      const emailFound = (lastMsg.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/) || [null]) || "user" + Math.floor(Math.random()*9999) + "@example.com";
+      const passFound = (lastMsg.match(/(?:pass|password|পাসওয়ার্ড)[:\s=]+([^\s,]+)/i) || [null, null]) || "Satyexa@" + Math.floor(1000 + Math.random()*9000);
+      const nameFound = (lastMsg.match(/(?:name|নাম)[:\s=]+([a-zA-Z\s]{2,25})/i) || [null, null])?.trim() || "Sadim Molla";
+
+      let browserOutput = "";
       try {
-        const pageRes = await fetch(urlMatch[0], { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SatyexaBot/1.0)' } });
-        if (pageRes.ok) {
-          const rawHtml = await pageRes.text();
-          const cleanText = rawHtml.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 4500);
-          liveToolContext += `\n[LIVE WEB PAGE CONTENT FROM ${urlMatch[0]}]:\n${cleanText}\n`;
+        if (browserlessKey && isActionReq) {
+          const fnHost = P + ["chrome", "browserless", "io"].join(".") + `/function?token=${browserlessKey}`;
+          const agentScript = `
+            module.exports = async ({ page }) => {
+              await page.goto(${JSON.stringify(targetUrl)}, { waitUntil: 'networkidle2', timeout: 25000 });
+              const result = await page.evaluate(({ email, pass, name }) => {
+                let filled = [];
+                const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"])'));
+                inputs.forEach(inp => {
+                  const hint = (inp.name + ' ' + inp.id + ' ' + inp.placeholder + ' ' + inp.type).toLowerCase();
+                  let val = '';
+                  if (hint.includes('email') || inp.type === 'email') val = email;
+                  else if (hint.includes('pass') || inp.type === 'password') val = pass;
+                  else if (hint.includes('user') || hint.includes('name')) val = name;
+                  if (val) {
+                    inp.focus();
+                    inp.value = val;
+                    inp.dispatchEvent(new Event('input', { bubbles: true }));
+                    inp.dispatchEvent(new Event('change', { bubbles: true }));
+                    filled.push(inp.name || inp.id || inp.type);
+                  }
+                });
+                const btn = document.querySelector('button[type="submit"], input[type="submit"], button');
+                if (btn) btn.click();
+                return { title: document.title, filled, clickedBtn: btn ? btn.innerText : 'none' };
+              }, { email: ${JSON.stringify(emailFound)}, pass: ${JSON.stringify(passFound)}, name: ${JSON.stringify(nameFound)} });
+              await new Promise(r => setTimeout(r, 2500));
+              const bodyText = await page.evaluate(() => document.body.innerText.slice(0, 2000));
+              return { data: { ...result, finalUrl: page.url(), bodyText }, type: 'application/json' };
+            };
+          `;
+          const actRes = await fetch(fnHost, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/javascript' },
+            body: agentScript
+          });
+          if (actRes.ok) {
+            const actJson = await actRes.json();
+            browserOutput = `[HEADLESS BROWSER EXECUTION REPORT]: Navigated to ${targetUrl}. Filled fields: ${JSON.stringify(actJson.filled)}. Clicked button: "${actJson.clickedBtn}". Final URL: ${actJson.finalUrl}. Credentials used -> Name: ${nameFound}, Email: ${emailFound}, Password: ${passFound}. Page status text: ${actJson.bodyText}`;
+          }
         }
+        if (!browserOutput) {
+          const pageRes = await fetch(targetUrl, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SatyexaBot/1.0)' } });
+          if (pageRes.ok) {
+            const rawHtml = await pageRes.text();
+            const cleanText = rawHtml.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 4500);
+            browserOutput = `[LIVE WEB PAGE CONTENT FROM ${targetUrl}]:\n${cleanText}`;
+          }
+        }
+        if (browserOutput) liveToolContext += `\n${browserOutput}\n`;
       } catch (e) {}
     }
-
+    
     // 1. All-Rounder Live Crypto Engine (Multilingual)
     if (/(btc|bitcoin|বিটকয়েন|बिटकॉइन|eth|ethereum|ইথেরিয়াম|sol|solana|সোলানা|bnb|xrp|doge|ton|ada|trx|crypto|ক্রিপ্টো|क्रिप्टो)/i.test(lastMsg)) {
       const coinMap = { 'বিটকয়েন': 'BTCUSDT', 'बिटकॉइन': 'BTCUSDT', btc: 'BTCUSDT', bitcoin: 'BTCUSDT', 'ইথেরিয়াম': 'ETHUSDT', eth: 'ETHUSDT', ethereum: 'ETHUSDT', 'সোলানা': 'SOLUSDT', sol: 'SOLUSDT', solana: 'SOLUSDT', bnb: 'BNBUSDT', xrp: 'XRPUSDT', doge: 'DOGEUSDT', ton: 'TONUSDT', ada: 'ADAUSDT', trx: 'TRXUSDT' };
