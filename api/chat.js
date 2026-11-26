@@ -38,52 +38,56 @@ export default async function handler(req, res) {
     // ==============================================================
     // LIVE TRADING MARKET ANALYZER & WEB READER AGENT
     // ==============================================================
-    let liveToolContext = "";
 
-    // 1. Live Web Page / URL Reader Agent
+        let liveToolContext = "";
     const urlMatch = lastMsg.match(/https?:\/\/[^\s]+/i);
     if (urlMatch) {
       try {
-        const pageRes = await fetch(urlMatch[0], {
-          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SatyexaBot/1.0)' }
-        });
+        const pageRes = await fetch(urlMatch[0], { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SatyexaBot/1.0)' } });
         if (pageRes.ok) {
           const rawHtml = await pageRes.text();
-          const cleanText = rawHtml
-            .replace(/<script[\s\S]*?<\/script>/gi, '')
-            .replace(/<style[\s\S]*?<\/style>/gi, '')
-            .replace(/<[^>]+>/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim()
-            .slice(0, 4500);
+          const cleanText = rawHtml.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 4500);
           liveToolContext += `\n[LIVE WEB PAGE CONTENT FROM ${urlMatch[0]}]:\n${cleanText}\n`;
         }
       } catch (e) {}
     }
 
-    // 2. Live Crypto & Market Trading Data (Binance Public API - 100% Free)
-    const tradeKeywords = /\b(btc|bitcoin|eth|ethereum|sol|solana|bnb|xrp|doge|ton|ada|trx|trade|trading|crypto|signal|market|price|chart)\b/i;
-    if (tradeKeywords.test(lastMsg)) {
-      const coinMap = {
-        btc: 'BTCUSDT', bitcoin: 'BTCUSDT',
-        eth: 'ETHUSDT', ethereum: 'ETHUSDT',
-        sol: 'SOLUSDT', solana: 'SOLUSDT',
-        bnb: 'BNBUSDT', xrp: 'XRPUSDT',
-        doge: 'DOGEUSDT', ton: 'TONUSDT',
-        ada: 'ADAUSDT', trx: 'TRXUSDT'
-      };
+    // 1. All-Rounder Live Crypto Engine (Multilingual)
+    if (/(btc|bitcoin|বিটকয়েন|बिटकॉइन|eth|ethereum|ইথেরিয়াম|sol|solana|সোলানা|bnb|xrp|doge|ton|ada|trx|crypto|ক্রিপ্টো|क्रिप्टो)/i.test(lastMsg)) {
+      const coinMap = { 'বিটকয়েন': 'BTCUSDT', 'बिटकॉइन': 'BTCUSDT', btc: 'BTCUSDT', bitcoin: 'BTCUSDT', 'ইথেরিয়াম': 'ETHUSDT', eth: 'ETHUSDT', ethereum: 'ETHUSDT', 'সোলানা': 'SOLUSDT', sol: 'SOLUSDT', solana: 'SOLUSDT', bnb: 'BNBUSDT', xrp: 'XRPUSDT', doge: 'DOGEUSDT', ton: 'TONUSDT', ada: 'ADAUSDT', trx: 'TRXUSDT' };
       let symbol = 'BTCUSDT';
       for (const [k, v] of Object.entries(coinMap)) {
-        if (new RegExp(`\\b${k}\\b`, 'i').test(lastMsg)) { symbol = v; break; }
+        if (lastMsg.toLowerCase().includes(k)) { symbol = v; break; }
       }
       try {
-        const mRes = await fetch(`https://binance.com{symbol}`);
+        const bUrl = P + ["api", "binance", "com"].join(".") + `/api/v3/ticker/24hr?symbol=${symbol}`;
+        const mRes = await fetch(bUrl);
         if (mRes.ok) {
           const m = await mRes.json();
-          liveToolContext += `\n[LIVE MARKET DATA - ${symbol}]: Current Price: $${parseFloat(m.lastPrice).toFixed(4)}, 24h Change: ${m.priceChangePercent}%, 24h High: $${parseFloat(m.highPrice).toFixed(4)}, 24h Low: $${parseFloat(m.lowPrice).toFixed(4)}, 24h Volume: ${parseFloat(m.volume).toFixed(2)}. Analyze trend, support/resistance, and risk clearly (note: for educational analysis only).\n`;
+          liveToolContext += `\n[LIVE CRYPTO DATA - ${symbol}]: Price: $${parseFloat(m.lastPrice).toFixed(4)}, 24h Change: ${m.priceChangePercent}%, High: $${parseFloat(m.highPrice).toFixed(4)}, Low: $${parseFloat(m.lowPrice).toFixed(4)}. Reply in the user's exact language.\n`;
         }
       } catch (e) {}
+    }
+
+    // 2. All-Rounder Live Stock, Forex & Gold Engine (Multilingual)
+    if (/(stock|share|শেয়ার|शेयर|মার্কেট|market|apple|অ্যাপল|aapl|tesla|টেসলা|tsla|google|গুগল|googl|microsoft|মাইক্রোসফট|msft|nvidia|এনভিডিয়া|nvda|amazon|অ্যামাজন|amzn|gold|সোনা|গোল্ড|सोना|xau|eurusd|usd)/i.test(lastMsg)) {
+      const stockMap = { 'অ্যাপল': 'AAPL', apple: 'AAPL', aapl: 'AAPL', 'টেসলা': 'TSLA', tesla: 'TSLA', tsla: 'TSLA', 'গুগল': 'GOOGL', google: 'GOOGL', googl: 'GOOGL', 'মাইক্রোসফট': 'MSFT', microsoft: 'MSFT', msft: 'MSFT', 'এনভিডিয়া': 'NVDA', nvidia: 'NVDA', nvda: 'NVDA', 'অ্যামাজন': 'AMZN', amazon: 'AMZN', amzn: 'AMZN', 'সোনা': 'GC=F', 'গোল্ড': 'GC=F', 'सोना': 'GC=F', gold: 'GC=F', xau: 'GC=F', eurusd: 'EURUSD=X' };
+      let ticker = 'AAPL';
+      for (const [k, v] of Object.entries(stockMap)) {
+        if (lastMsg.toLowerCase().includes(k)) { ticker = v; break; }
+      }
+      try {
+        const yUrl = P + ["query1", "finance", "yahoo", "com"].join(".") + `/v8/finance/chart/${ticker}?interval=1d&range=5d`;
+        const sRes = await fetch(yUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+        if (sRes.ok) {
+          const sData = await sRes.json();
+          const meta = sData?.chart?.result?.[0]?.meta;
+          if (meta?.regularMarketPrice) {
+            liveToolContext += `\n[LIVE MARKET DATA - ${ticker}]: Current Price: $${meta.regularMarketPrice} ${meta.currency || 'USD'}, Previous Close: $${meta.previousClose}. Analyze trend & reply in the user's exact language.\n`;
+          }
         }
+      } catch (e) {}
+                                        }
     
     const sysPrompt =
       "You are Satyexa AI (Genesis Prime v20.0 APEX), created and owned by Sadim Molla, Founder of Sadimx Technology. " +
