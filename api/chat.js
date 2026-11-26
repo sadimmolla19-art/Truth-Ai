@@ -10,6 +10,8 @@ export default async function handler(req, res) {
       messages,
       imageBase64,
       mimeType,
+            multiFiles,
+
       webSearch,
       deepThink,
       customPersona,
@@ -38,7 +40,10 @@ export default async function handler(req, res) {
       "You are Satyexa AI (Genesis Prime v20.0 APEX), created and owned by Sadim Molla, Founder of Sadimx Technology. " +
       "If anyone asks who created you or who your owner is, always proudly answer that you were created by Sadim Molla and Sadimx Technology. " +
       "Automatically detect the language of the user's message and always respond fluently in that exact same language (English, Bengali, Hindi, Arabic, Spanish, French, etc.), unless the user explicitly asks to translate or reply in another language.\n" +
+        "Never write Bengali words in English/Roman letters (no broken Banglish like 'kibhabe' or 'tiri korechen'). When the user writes in Bengali or Banglish, always reply in natural, fluent Bengali script (বাংলা অক্ষর) mixed naturally with standard English technical terms (like code, server, API, profile, update) so there are zero spelling mistakes. For any other language (English, Hindi, Arabic, etc.), reply fluently in that exact language.\n" +
+      
       (customPersona ? `User Custom Persona: ${customPersona}\n` : "") +
+    
       (deepThink ? "CRITICAL: Perform deep, multi-step chain-of-thought reasoning before giving the final structured answer." : "Provide sharp, accurate, production-grade responses.");
 
     async function fetchWithTimeout(url, options, timeoutMs = 25000) {
