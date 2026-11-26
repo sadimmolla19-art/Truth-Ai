@@ -43,42 +43,75 @@ const browserlessKey = process.env.BROWSERLESS_KEY;
         let liveToolContext = "";
     const urlMatch = lastMsg.match(/https?:\/\/[^\s]+/i);
     
-            if (urlMatch) {
+                if (urlMatch) {
       const targetUrl = urlMatch;
       const isActionReq = /(create account|signup|sign up|register|login|fill|submit|অ্যাকাউন্ট|লগইন|ফর্ম)/i.test(lastMsg);
-      const emailFound = (lastMsg.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/) || [null]) || "user" + Math.floor(Math.random()*9999) + "@example.com";
+      const emailFound = (lastMsg.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/) || [null]) || "sadim" + Math.floor(100 + Math.random()*8999) + "@gmail.com";
       const passFound = (lastMsg.match(/(?:pass|password|পাসওয়ার্ড)[:\s=]+([^\s,]+)/i) || [null, null]) || "Satyexa@" + Math.floor(1000 + Math.random()*9000);
       const nameFound = (lastMsg.match(/(?:name|নাম)[:\s=]+([a-zA-Z\s]{2,25})/i) || [null, null])?.trim() || "Sadim Molla";
-              
+      const phoneFound = (lastMsg.match(/(?:phone|mobile|নম্বর)[:\s=]+([0-9+]{8,15})/i) || [null, null]) || "017" + Math.floor(10000000 + Math.random()*89999999);
+
       let browserOutput = "";
       try {
         if (browserlessKey && isActionReq) {
           const fnHost = P + ["chrome", "browserless", "io"].join(".") + `/function?token=${browserlessKey}`;
           const agentScript = `
             module.exports = async ({ page }) => {
-              await page.goto(${JSON.stringify(targetUrl)}, { waitUntil: 'networkidle2', timeout: 25000 });
-              const result = await page.evaluate(({ email, pass, name }) => {
+              await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+              await page.goto(${JSON.stringify(targetUrl)}, { waitUntil: 'networkidle2', timeout: 28000 });
+              
+              // If landing page has a Sign Up / Register link/button and no password field yet, click it first
+              const hasPass = await page.$('input[type="password"]');
+              if (!hasPass) {
+                await page.evaluate(() => {
+                  const triggers = Array.from(document.querySelectorAll('a, button'));
+                  const regBtn = triggers.find(el => /(sign up|signup|register|create account|get started)/i.test(el.innerText || ''));
+                  if (regBtn) regBtn.click();
+                });
+                await new Promise(r => setTimeout(r, 2500));
+              }
+
+              const result = await page.evaluate(({ email, pass, name, phone }) => {
                 let filled = [];
-                const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"])'));
+                const parts = name.split(' ');
+                const firstName = parts || 'Sadim';
+                const lastName = parts.slice(1).join(' ') || 'Molla';
+
+                const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"]):not([disabled])'));
                 inputs.forEach(inp => {
-                  const hint = (inp.name + ' ' + inp.id + ' ' + inp.placeholder + ' ' + inp.type).toLowerCase();
+                  if (inp.type === 'checkbox') {
+                    if (!inp.checked) inp.click();
+                    return;
+                  }
+                  const hint = (inp.name + ' ' + inp.id + ' ' + inp.placeholder + ' ' + inp.type + ' ' + (inp.getAttribute('aria-label') || '')).toLowerCase();
                   let val = '';
                   if (hint.includes('email') || inp.type === 'email') val = email;
                   else if (hint.includes('pass') || inp.type === 'password') val = pass;
-                  else if (hint.includes('user') || hint.includes('name')) val = name;
+                  else if (hint.includes('phone') || hint.includes('mobile') || inp.type === 'tel') val = phone;
+                  else if (hint.includes('first')) val = firstName;
+                  else if (hint.includes('last')) val = lastName;
+                  else if (hint.includes('user')) val = firstName.toLowerCase() + Math.floor(100 + Math.random()*900);
+                  else if (hint.includes('name')) val = name;
+
                   if (val) {
                     inp.focus();
-                    inp.value = val;
+                    const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+                    if (nativeSetter) nativeSetter.call(inp, val);
+                    else inp.value = val;
                     inp.dispatchEvent(new Event('input', { bubbles: true }));
                     inp.dispatchEvent(new Event('change', { bubbles: true }));
-                    filled.push(inp.name || inp.id || inp.type);
+                    inp.blur();
+                    filled.push(inp.name || inp.id || inp.placeholder || inp.type);
                   }
                 });
-                const btn = document.querySelector('button[type="submit"], input[type="submit"], button');
-                if (btn) btn.click();
-                return { title: document.title, filled, clickedBtn: btn ? btn.innerText : 'none' };
-              }, { email: ${JSON.stringify(emailFound)}, pass: ${JSON.stringify(passFound)}, name: ${JSON.stringify(nameFound)} });
-              await new Promise(r => setTimeout(r, 2500));
+
+                const buttons = Array.from(document.querySelectorAll('button[type="submit"], input[type="submit"], button'));
+                const submitBtn = buttons.find(b => /(create|sign up|signup|register|submit|continue|next|join)/i.test((b.innerText || b.value || ''))) || buttons;
+                if (submitBtn) submitBtn.click();
+                return { title: document.title, filled, clickedBtn: submitBtn ? (submitBtn.innerText || submitBtn.value || 'submit') : 'none' };
+              }, { email: ${JSON.stringify(emailFound)}, pass: ${JSON.stringify(passFound)}, name: ${JSON.stringify(nameFound)}, phone: ${JSON.stringify(phoneFound)} });
+
+              await new Promise(r => setTimeout(r, 3000));
               const bodyText = await page.evaluate(() => document.body.innerText.slice(0, 2000));
               return { data: { ...result, finalUrl: page.url(), bodyText }, type: 'application/json' };
             };
@@ -94,16 +127,16 @@ const browserlessKey = process.env.BROWSERLESS_KEY;
           }
         }
         if (!browserOutput) {
-          const pageRes = await fetch(targetUrl, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SatyexaBot/1.0)' } });
+          const pageRes = await fetch(urlMatch, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SatyexaBot/1.0)' } });
           if (pageRes.ok) {
             const rawHtml = await pageRes.text();
             const cleanText = rawHtml.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 4500);
-            browserOutput = `[LIVE WEB PAGE CONTENT FROM ${targetUrl}]:\n${cleanText}`;
+            browserOutput = `[LIVE WEB PAGE CONTENT FROM ${urlMatch}]:\n${cleanText}`;
           }
         }
         if (browserOutput) liveToolContext += `\n${browserOutput}\n`;
       } catch (e) {}
-    }
+                }
     
     // 1. All-Rounder Live Crypto Engine (Multilingual)
     if (/(btc|bitcoin|বিটকয়েন|बिटकॉइन|eth|ethereum|ইথেরিয়াম|sol|solana|সোলানা|bnb|xrp|doge|ton|ada|trx|crypto|ক্রিপ্টো|क्रिप्टो)/i.test(lastMsg)) {
@@ -148,6 +181,8 @@ const browserlessKey = process.env.BROWSERLESS_KEY;
     
     const sysPrompt =
       "You are Satyexa AI (Genesis Prime v20.0 APEX), created and owned by Sadim Molla, Founder of Sadimx Technology. " +
+          `You have a built-in LIVE CLOUD HEADLESS CHROME BROWSER AGENT enabled. Never say "I cannot create accounts or fill forms". If the user asks without a URL, confidently say "Yes! Please provide the website signup URL (along with optional name, email, and password) and I will open my headless browser to fill and submit the form automatically." If [HEADLESS BROWSER EXECUTION REPORT] is present in context, summarize the exact fields filled, credentials used, and final status clearly.\n` +
+      
       "If anyone asks who created you or who your owner is, always proudly answer that you were created by Sadim Molla and Sadimx Technology. " +
       "Automatically detect the language of the user's message and always respond fluently in that exact same language (English, Bengali, Hindi, Arabic, Spanish, French, etc.), unless the user explicitly asks to translate or reply in another language.\n" +
         "Never write Bengali words in English/Roman letters (no broken Banglish like 'kibhabe' or 'tiri korechen'). When the user writes in Bengali or Banglish, always reply in natural, fluent Bengali script (বাংলা অক্ষর) mixed naturally with standard English technical terms (like code, server, API, profile, update) so there are zero spelling mistakes. For any other language (English, Hindi, Arabic, etc.), reply fluently in that exact language.\n" +
