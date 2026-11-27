@@ -85,6 +85,79 @@ export default async function handler(req, res) {
 
     const liveMarketFeed = isMarketQuery ? await getLiveCryptoSnapshot(prompt) : '';
     const isTruthMode = Boolean(body.truthMode || body.truth || String(body.model || '').toLowerCase().includes('truth'));
+        // Headless Browser Agent Bridge (Works in BOTH APEX & TRUTH-AI Modes)
+    async function runHeadlessAgent(userPrompt) {
+      const urlMatch = userPrompt.match(/https?:\/\/[^\s"'<>]+/i);
+      const browserlessKey = process.env.BROWSERLESS_API_KEY;
+      if (!urlMatch || !browserlessKey) return null;
+
+      const targetUrl = urlMatch;
+      const isFormAction = /account|register|sign up|signup|fill|form|create|submit|login/i.test(userPrompt);
+      const emailMatch = userPrompt.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+      const passMatch = userPrompt.match(/pass(?:word)?[:=\s]+([^\s]+)/i);
+
+      const safeEmail = emailMatch ? emailMatch : `sadim.auto${Math.floor(100 + Math.random() * 899)}@gmail.com`;
+      const safePass = passMatch ? passMatch : 'Satyexa#2026!';
+      const usernameToUse = safeEmail.split('@').replace(/[^a-zA-Z0-9]/g, '') + Math.floor(10 + Math.random() * 89);
+
+      try {
+        const endpoint = 'https://chrome.browserless.' + 'io/function?token=' + browserlessKey;
+        const script = `
+          module.exports = async ({ page }) => {
+            await page.setViewport({ width: 1280, height: 800 });
+            await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+            await page.goto(${JSON.stringify(targetUrl)}, { waitUntil: 'networkidle2', timeout: 25000 });
+
+            let formFilled = false;
+            if (${JSON.stringify(isFormAction)}) {
+              formFilled = await page.evaluate(({ email, password, usernameToUse }) => {
+                const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"]):not([disabled]), textarea'));
+                if (inputs.length === 0) return false;
+                inputs.forEach(inp => {
+                  const attr = (inp.type + ' ' + inp.name + ' ' + inp.id + ' ' + inp.placeholder).toLowerCase();
+                  if (inp.type === 'checkbox') { inp.checked = true; }
+                  else if (attr.includes('email')) { inp.value = email; }
+                  else if (attr.includes('pass')) { inp.value = password; }
+                  else if (attr.includes('user')) { inp.value = usernameToUse; }
+                  else if (attr.includes('name')) { inp.value = 'Sadim Molla'; }
+                  else if (attr.includes('phone') || attr.includes('mobile')) { inp.value = '01700000000'; }
+                  inp.dispatchEvent(new Event('input', { bubbles: true }));
+                  inp.dispatchEvent(new Event('change', { bubbles: true }));
+                });
+                const btns = Array.from(document.querySelectorAll('button, input[type="submit"]'));
+                const target = btns.find(b => /sign up|register|create|submit|next|continue|join/i.test(b.innerText || b.value || ''));
+                if (target) target.click();
+                return true;
+              }, { email: ${JSON.stringify(safeEmail)}, password: ${JSON.stringify(safePass)}, usernameToUse: ${JSON.stringify(usernameToUse)} });
+
+              if (formFilled) {
+                await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 8000 }).catch(() => {});
+              }
+            }
+
+            const title = await page.title();
+            const finalUrl = page.url();
+            const content = await page.evaluate(() => document.body.innerText.slice(0, 2500));
+            return { data: { title, finalUrl, formFilled, username: usernameToUse, email: email, content }, type: 'application/json' };
+          };
+        `;
+
+        const r = await fetchWithTimeout(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/javascript' },
+          body: script
+        }, 28000);
+
+        if (!r.ok) return null;
+        const json = await r.json();
+        return `\n[HEADLESS CHROME AGENT EXECUTION REPORT]:\nTarget URL: ${targetUrl}\nFinal URL: ${json.data?.finalUrl}\nPage Title: ${json.data?.title}\nForm Auto-Filled & Submitted: ${json.data?.formFilled}\nGenerated Credentials: Email=${json.data?.email}, Username=${json.data?.username}, Password=${safePass}\nExtracted Page Content:\n${json.data?.content}\n`;
+      } catch {
+        return null;
+      }
+    }
+
+    const headlessReport = await runHeadlessAgent(prompt);
+    
     let systemPrompt = "";
     
 
@@ -241,11 +314,11 @@ You are TRUTH-AI.
 Be decisive, analytical, confident and honest.`;
 }
 
-    async function callGemini(userText, modelName, useSearchTool = false) {
+        async function callGemini(userText, modelName, useSearchTool = false) {
       if (!GEMINI_KEY) throw new Error('No Gemini Key');
       const url = `${GEMINI_ROOT}/${modelName}:generateContent?key=${GEMINI_KEY}`;
       const payload = {
-        contents: [{ parts: [{ text: `${systemPrompt}\n${liveMarketFeed}\nUser: ${userText}` }] }]
+        contents: [{ parts: [{ text: `${systemPrompt}\n${liveMarketFeed}${headlessReport || ''}\nUser: ${userText}` }] }]
       };
       if (useSearchTool) {
         payload.tools = [{ googleSearch: {} }];
@@ -273,7 +346,7 @@ Be decisive, analytical, confident and honest.`;
         body: JSON.stringify({
           model: modelName,
           messages: [
-            { role: 'system', content: systemPrompt + liveMarketFeed },
+            { role: 'system', content: systemPrompt + liveMarketFeed + (headlessReport || '') },
             { role: 'user', content: userText }
           ]
         })
@@ -292,13 +365,13 @@ Be decisive, analytical, confident and honest.`;
         headers: {
           'Authorization': `Bearer ${OPENROUTER_KEY}`,
           'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://vercel.app',
+          'HTTP-Referer': 'https://satyexaai.' + 'vercel.app',
           'X-Title': 'Satyexa AI'
         },
         body: JSON.stringify({
           model: modelName,
           messages: [
-            { role: 'system', content: systemPrompt + liveMarketFeed },
+            { role: 'system', content: systemPrompt + liveMarketFeed + (headlessReport || '') },
             { role: 'user', content: userText }
           ]
         })
@@ -308,6 +381,8 @@ Be decisive, analytical, confident and honest.`;
       const replyText = d.choices?.at(0)?.message?.content;
       if (!replyText) throw new Error('Empty OpenRouter response');
       return { text: replyText, engine: modelName.split('/').pop().toUpperCase() };
+    }
+    
     }
 
     // Priority Waterfall: Flagship with Live Google Search FIRST -> Standard Flagship -> Free Fallbacks LAST
