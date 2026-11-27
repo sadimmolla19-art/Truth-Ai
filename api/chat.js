@@ -13,10 +13,19 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 25000) {
   }
 }
 
+async function parseSafeJson(response, providerName) {
+  const raw = await response.text();
+  try {
+    return JSON.parse(raw);
+  } catch {
+    throw new Error(`${providerName} returned non-JSON response (HTTP ${response.status}).`);
+  }
+}
+
 async function getAvailableGeminiModels(apiKey) {
   try {
     const r = await fetchWithTimeout(`${GEMINI_ROOT}?key=${apiKey}`, { method: 'GET' }, 6000);
-    const d = await r.json();
+    const d = await parseSafeJson(r, 'Gemini Models');
     if (r.ok && Array.isArray(d.models)) {
       const valid = d.models
         .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
@@ -94,14 +103,14 @@ export default async function handler(req, res) {
           contents: [{ parts: [{ text: `${systemPrompt}\n\nUser: ${userText}` }] }]
         })
       }, 35000);
-      const d = await r.json();
+      const d = await parseSafeJson(r, 'Gemini');
       if (!r.ok) throw new Error(d.error?.message || 'Gemini API failed');
       return d.candidates?.at(0)?.content?.parts?.at(0)?.text || 'No response generated.';
     }
 
     async function callGroq(userText, modelName = 'llama-3.3-70b-versatile') {
       if (!GROQ_KEY) throw new Error('GROQ_KEY missing in Vercel.');
-      const groqUrl = 'https://groq.com';
+      const groqUrl = 'https://api.groq.com/openai/v1/chat/completions';
       const r = await fetchWithTimeout(groqUrl, {
         method: 'POST',
         headers: {
@@ -116,7 +125,7 @@ export default async function handler(req, res) {
           ]
         })
       }, 25000);
-      const d = await r.json();
+      const d = await parseSafeJson(r, 'Groq');
       if (!r.ok) throw new Error(d.error?.message || 'Groq API failed');
       return d.choices?.at(0)?.message?.content || 'No response generated.';
     }
@@ -140,7 +149,7 @@ export default async function handler(req, res) {
           ]
         })
       }, 40000);
-      const d = await r.json();
+      const d = await parseSafeJson(r, 'OpenRouter');
       if (!r.ok) throw new Error(d.error?.message || 'OpenRouter API failed');
       return d.choices?.at(0)?.message?.content || 'No response generated.';
     }
@@ -158,9 +167,9 @@ export default async function handler(req, res) {
         const drafts = await Promise.all(tasks);
         const criticInput = `Review these AI drafts and synthesize the single best, most accurate final answer.\n\nQuery: ${prompt}\n\nDrafts:\n${drafts.join('\n---\n')}`;
         if (GEMINI_KEY) {
-          finalResponse = await callGemini(criticInput, 'pro');
+          finalResponse = await callGemini(criticInput, 'pro').catch(() => drafts.find(d => !d.startsWith('[')) || drafts.at(0));
         } else if (GROQ_KEY) {
-          finalResponse = await callGroq(criticInput, 'llama-3.3-70b-versatile');
+          finalResponse = await callGroq(criticInput, 'llama-3.3-70b-versatile').catch(() => drafts.at(0));
         } else {
           finalResponse = drafts.at(0);
         }
@@ -196,9 +205,5 @@ export default async function handler(req, res) {
     });
 
   } catch (err) {
-    return res.status(500).json({
-      error: err.message || 'Server error',
-      reply: `⚠️ Error: ${err.message}`
-    });
-  }
-               }
+    console.error("Satyexa AI API Error:", err.message);
+                                
