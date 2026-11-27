@@ -69,7 +69,7 @@ export default async function handler(req, res) {
     async function callGemini(userText, preferredTier = 'flash') {
       if (!GEMINI_KEY) throw new Error('GEMINI_KEY missing in Vercel.');
       const models = await getAvailableGeminiModels(GEMINI_KEY);
-      let targetModel = models || 'gemini-2.5-flash';
+    let targetModel = models[0] || 'gemini-2.5-flash';
       if (preferredTier === 'flash') {
         targetModel = models.find(m => m.includes('flash')) || 'gemini-2.5-flash';
       }
@@ -84,7 +84,7 @@ export default async function handler(req, res) {
       }, 35000);
       const d = await r.json();
       if (!r.ok) throw new Error(d.error?.message || 'Gemini API failed');
-      return d.candidates?.?.content?.parts?.?.text || 'No response generated.';
+      return d.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated.';
     }
 
     async function callGroq(userText, modelName = 'llama-3.3-70b-versatile') {
@@ -105,7 +105,7 @@ export default async function handler(req, res) {
       }, 25000);
       const d = await r.json();
       if (!r.ok) throw new Error(d.error?.message || 'Groq API failed');
-      return d.choices?.?.message?.content || 'No response generated.';
+      return d.choices?.[0]?.message?.content || 'No response generated.';
     }
 
     async function callOpenRouter(userText, modelName = 'openrouter/auto') {
@@ -128,7 +128,7 @@ export default async function handler(req, res) {
       }, 40000);
       const d = await r.json();
       if (!r.ok) throw new Error(d.error?.message || 'OpenRouter API failed');
-      return d.choices?.?.message?.content || 'No response generated.';
+      return d.choices?.[0]?.message?.content || 'No response generated.';
     }
 
     let finalResponse = '';
@@ -149,7 +149,7 @@ export default async function handler(req, res) {
         } else if (GROQ_KEY) {
           finalResponse = await callGroq(criticInput, 'llama-3.3-70b-versatile');
         } else {
-          finalResponse = drafts;
+        finalResponse = drafts[0];
         }
       } else {
         throw new Error('No API keys configured in Vercel Environment Variables.');
