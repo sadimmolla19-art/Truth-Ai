@@ -1,6 +1,4 @@
-https://generativelanguage.googleapis.com/v1beta/models
-
-
+const GEMINI_ROOT = 'https://generativelanguage.' + '://googleapis.com';
 async function fetchWithTimeout(url, options = {}, timeoutMs = 25000) {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeoutMs);
@@ -205,7 +203,12 @@ export default async function handler(req, res) {
       response: finalResponse,
       text: finalResponse
     });
-
   } catch (err) {
     console.error("Satyexa AI API Error:", err.message);
-                                
+    return res.status(500).json({
+      error: err.message || 'Server error',
+      reply: `⚠️ System Error: ${err.message}`
+    });
+  }
+}
+
