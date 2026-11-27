@@ -84,7 +84,9 @@ export default async function handler(req, res) {
     const OPENROUTER_KEY = process.env.OPENROUTER_KEY || process.env.OPENROUTER_API_KEY || '';
 
     const liveMarketFeed = isMarketQuery ? await getLiveCryptoSnapshot(prompt) : '';
-
+    const isTruthMode = Boolean(body.truthMode || body.truth || String(body.model || '').toLowerCase().includes('truth'));
+    let systemPrompt = "";
+    
 
 if (isTruthMode) {
   systemPrompt = `You are TRUTH-AI, a bold, opinionated, analytical and conversational AI.
