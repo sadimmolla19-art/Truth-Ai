@@ -1232,6 +1232,53 @@ setInterval(function() {
   }, 500);
 })();
     </script>
+  <!-- SATYEXA CHARACTER SWITCHER BUTTON ONLY -->
+<script>
+(function() {
+  window.satyexaTruthMode = false;
+
+  function injectCharacterButton() {
+    const webBtn = Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes('Web:'));
+    if (webBtn && !document.getElementById('truthCharToggleBtn')) {
+      const charBtn = document.createElement('button');
+      charBtn.id = 'truthCharToggleBtn';
+      charBtn.type = 'button';
+      charBtn.style.cssText = 'background:#1e293b; color:#38bdf8; border:1px solid #334155; padding:4px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; margin-right:6px; transition:0.2s;';
+      charBtn.innerText = '⚡ Mode: APEX';
+      charBtn.onclick = function() {
+        window.satyexaTruthMode = !window.satyexaTruthMode;
+        if (window.satyexaTruthMode) {
+          charBtn.innerText = '🔥 Mode: TRUTH-AI';
+          charBtn.style.background = '#7f1d1d';
+          charBtn.style.color = '#fca5a5';
+          charBtn.style.borderColor = '#ef4444';
+        } else {
+          charBtn.innerText = '⚡ Mode: APEX';
+          charBtn.style.background = '#1e293b';
+          charBtn.style.color = '#38bdf8';
+          charBtn.style.borderColor = '#334155';
+        }
+      };
+      webBtn.parentNode.insertBefore(charBtn, webBtn);
+    }
+  }
+
+  injectCharacterButton();
+  setInterval(injectCharacterButton, 1000);
+
+  const originalFetch = window.fetch;
+  window.fetch = async function(resource, config) {
+    if (typeof resource === 'string' && resource.includes('/api/chat') && config && config.body) {
+      try {
+        const parsedBody = JSON.parse(config.body);
+        parsedBody.truthMode = window.satyexaTruthMode;
+        config.body = JSON.stringify(parsedBody);
+      } catch (e) {}
+    }
+    return originalFetch.apply(this, arguments);
+  };
+})();
+</script>
   
 </body>
 </html>
