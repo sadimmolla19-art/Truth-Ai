@@ -1,5 +1,8 @@
 const GEMINI_ROOT = 'https://generativelanguage.' + '://googleapis.com';
-async function fetchWithTimeout(url, options = {}, timeoutMs = 25000) {
+const GROQ_URL = 'https://api.groq.' + 'com/openai/v1/chat/completions';
+const OPENROUTER_URL = 'https://openrouter.' + 'ai/api/v1/chat/completions';
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = 22000) {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -17,33 +20,8 @@ async function parseSafeJson(response, providerName) {
   try {
     return JSON.parse(raw);
   } catch {
-    throw new Error(`${providerName} returned non-JSON response (HTTP ${response.status}).`);
+    throw new Error(`${providerName} returned invalid format (${response.status})`);
   }
-}
-
-async function getAvailableGeminiModels(apiKey) {
-  try {
-    const r = await fetchWithTimeout(`${GEMINI_ROOT}?key=${apiKey}`, { method: 'GET' }, 6000);
-    const d = await parseSafeJson(r, 'Gemini Models');
-    if (r.ok && Array.isArray(d.models)) {
-      const valid = d.models
-        .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
-        .map(m => m.name.replace('models/', ''))
-        .filter(name => name.includes('gemini') && !name.includes('vision') && !name.includes('embedding'));
-
-      const priorityScore = (name) => {
-        if (name.includes('pro') && (name.includes('3.') || name.includes('2.5') || name.includes('exp') || name.includes('latest'))) return 100;
-        if (name.includes('pro')) return 90;
-        if (name.includes('flash') && !name.includes('lite') && (name.includes('3.') || name.includes('2.5') || name.includes('latest'))) return 80;
-        if (name.includes('flash') && !name.includes('lite')) return 70;
-        return 50;
-      };
-
-      valid.sort((a, b) => priorityScore(b) - priorityScore(a));
-      if (valid.length > 0) return valid.slice(0, 5);
-    }
-  } catch {}
-  return ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-flash-latest', 'gemini-flash-lite-latest'];
 }
 
 export default async function handler(req, res) {
@@ -82,35 +60,30 @@ export default async function handler(req, res) {
     const GROQ_KEY = process.env.GROQ_KEY || process.env.GROQ_API_KEY || '';
     const OPENROUTER_KEY = process.env.OPENROUTER_KEY || process.env.OPENROUTER_API_KEY || '';
 
-    let systemPrompt = "You are Satyexa AI, an elite international AI assistant. Provide clear, accurate, and comprehensive responses.";
-    if (thinkMode) systemPrompt += " [THINK MODE]: Show detailed step-by-step reasoning before your final answer.";
-    if (webMode) systemPrompt += " [WEB CONTEXT]: Ensure factual precision and up-to-date technical accuracy.";
+    let systemPrompt = "You are Satyexa AI (Genesis Prime), created by Sadim Molla, Founder of Sadimx Technology. Provide clear, accurate, and complete responses.";
+    if (thinkMode) systemPrompt += " [THINK MODE]: Show step-by-step reasoning before your final answer.";
+    if (webMode) systemPrompt += " [WEB CONTEXT]: Ensure factual precision and up-to-date details.";
 
-    async function callGemini(userText, preferredTier = 'flash') {
-      if (!GEMINI_KEY) throw new Error('GEMINI_KEY missing in Vercel.');
-      const models = await getAvailableGeminiModels(GEMINI_KEY);
-      let targetModel = models.at(0) || 'gemini-2.5-flash';
-      if (preferredTier === 'flash') {
-        targetModel = models.find(m => m.includes('flash')) || 'gemini-2.5-flash';
-      }
-
-      const url = `${GEMINI_ROOT}/${targetModel}:generateContent?key=${GEMINI_KEY}`;
+    async function callGemini(userText, modelName) {
+      if (!GEMINI_KEY) throw new Error('No Gemini Key');
+      const url = `${GEMINI_ROOT}/${modelName}:generateContent?key=${GEMINI_KEY}`;
       const r = await fetchWithTimeout(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: `${systemPrompt}\n\nUser: ${userText}` }] }]
         })
-      }, 35000);
+      }, 25000);
       const d = await parseSafeJson(r, 'Gemini');
-      if (!r.ok) throw new Error(d.error?.message || 'Gemini API failed');
-      return d.candidates?.at(0)?.content?.parts?.at(0)?.text || 'No response generated.';
+      if (!r.ok) throw new Error(d.error?.message || 'Gemini quota/error');
+      const replyText = d.candidates?.at(0)?.content?.parts?.at(0)?.text;
+      if (!replyText) throw new Error('Empty Gemini response');
+      return { text: replyText, engine: modelName.toUpperCase() };
     }
 
-    async function callGroq(userText, modelName = 'llama-3.3-70b-versatile') {
-      if (!GROQ_KEY) throw new Error('GROQ_KEY missing in Vercel.');
-      const groqUrl = 'https://api.groq.com/openai/v1/chat/completions';
-      const r = await fetchWithTimeout(groqUrl, {
+    async function callGroq(userText, modelName) {
+      if (!GROQ_KEY) throw new Error('No Groq Key');
+      const r = await fetchWithTimeout(GROQ_URL, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${GROQ_KEY}`,
@@ -123,17 +96,17 @@ export default async function handler(req, res) {
             { role: 'user', content: userText }
           ]
         })
-      }, 25000);
+      }, 15000);
       const d = await parseSafeJson(r, 'Groq');
-      if (!r.ok) throw new Error(d.error?.message || 'Groq API failed');
-      return d.choices?.at(0)?.message?.content || 'No response generated.';
+      if (!r.ok) throw new Error(d.error?.message || 'Groq quota/error');
+      const replyText = d.choices?.at(0)?.message?.content;
+      if (!replyText) throw new Error('Empty Groq response');
+      return { text: replyText, engine: `GROQ-${modelName.toUpperCase()}` };
     }
 
-    async function callOpenRouter(userText, modelName = 'openrouter/auto') {
-      if (!OPENROUTER_KEY) throw new Error('OPENROUTER_KEY missing in Vercel.');
-    const openRouterUrl = 'https://openrouter.ai/api/v1/chat/completions';
-
-      const r = await fetchWithTimeout(openRouterUrl, {
+    async function callOpenRouter(userText, modelName) {
+      if (!OPENROUTER_KEY) throw new Error('No OpenRouter Key');
+      const r = await fetchWithTimeout(OPENROUTER_URL, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${OPENROUTER_KEY}`,
@@ -148,67 +121,57 @@ export default async function handler(req, res) {
             { role: 'user', content: userText }
           ]
         })
-      }, 40000);
+      }, 25000);
       const d = await parseSafeJson(r, 'OpenRouter');
-      if (!r.ok) throw new Error(d.error?.message || 'OpenRouter API failed');
-      return d.choices?.at(0)?.message?.content || 'No response generated.';
+      if (!r.ok) throw new Error(d.error?.message || 'OpenRouter quota/error');
+      const replyText = d.choices?.at(0)?.message?.content;
+      if (!replyText) throw new Error('Empty OpenRouter response');
+      return { text: replyText, engine: modelName.split('/').pop().toUpperCase() };
     }
 
-    let finalResponse = '';
+    // Priority Chain: Flagship Models FIRST -> Mid-tier -> Ultra-Free Lite Models LAST
+    const fallbackChain = [
+      () => callGemini(prompt, 'gemini-2.5-pro'),
+      () => callGemini(prompt, 'gemini-2.5-flash'),
+      () => callGemini(prompt, 'gemini-flash-latest'),
+      () => callOpenRouter(prompt, 'deepseek/deepseek-r1:free'),
+      () => callOpenRouter(prompt, 'qwen/qwen-2.5-coder-32b-instruct:free'),
+      () => callOpenRouter(prompt, 'openrouter/auto'),
+      () => callGroq(prompt, 'llama-3.1-8b-instant'),
+      () => callGemini(prompt, 'gemini-flash-lite-latest') // Last resort when all limits are exhausted
+    ];
 
-    if (modelSelection.includes('apex') || modelSelection.includes('god')) {
-      const tasks = [];
-      if (GROQ_KEY) tasks.push(callGroq(prompt, 'llama-3.3-70b-versatile').catch(e => `[Groq Fallback]: ${e.message}`));
-      if (GEMINI_KEY) tasks.push(callGemini(prompt, 'flash').catch(e => `[Gemini Fallback]: ${e.message}`));
+    let result = null;
+    let lastError = 'All AI engines are busy.';
 
-      if (tasks.length === 0 && OPENROUTER_KEY) {
-        finalResponse = await callOpenRouter(prompt, 'deepseek/deepseek-r1:free');
-      } else if (tasks.length > 0) {
-        const drafts = await Promise.all(tasks);
-        const criticInput = `Review these AI drafts and synthesize the single best, most accurate final answer.\n\nQuery: ${prompt}\n\nDrafts:\n${drafts.join('\n---\n')}`;
-        if (GEMINI_KEY) {
-          finalResponse = await callGemini(criticInput, 'pro').catch(() => drafts.find(d => !d.startsWith('[')) || drafts.at(0));
-        } else if (GROQ_KEY) {
-          finalResponse = await callGroq(criticInput, 'llama-3.3-70b-versatile').catch(() => drafts.at(0));
-        } else {
-          finalResponse = drafts.at(0);
+    for (const runModel of fallbackChain) {
+      try {
+        const resObj = await runModel();
+        if (resObj && resObj.text && resObj.text.trim().length > 0) {
+          result = resObj;
+          break;
         }
-      } else {
-        throw new Error('No API keys configured in Vercel Environment Variables.');
+      } catch (err) {
+        lastError = err.message;
       }
     }
-    else if (modelSelection.includes('gemini') || modelSelection.includes('neon') || modelSelection.includes('hydrogen')) {
-      finalResponse = await callGemini(prompt, modelSelection.includes('pro') || modelSelection.includes('hydrogen') ? 'pro' : 'flash');
-    } else if (modelSelection.includes('qwen') && modelSelection.includes('coder')) {
-      finalResponse = OPENROUTER_KEY
-        ? await callOpenRouter(prompt, 'qwen/qwen-2.5-coder-32b-instruct:free')
-        : await callGroq(prompt, 'qwen-2.5-32b');
-    } else if (modelSelection.includes('groq') || modelSelection.includes('llama') || modelSelection.includes('kimi')) {
-      finalResponse = await callGroq(prompt, 'llama-3.3-70b-versatile');
-    } else if (modelSelection.includes('deepseek') || modelSelection.includes('particle')) {
-      finalResponse = await callOpenRouter(prompt, 'deepseek/deepseek-r1:free');
-    } else if (modelSelection.includes('gemma')) {
-      finalResponse = await callOpenRouter(prompt, 'google/gemma-3-27b-it:free');
-    } else if (modelSelection.includes('nemotron') || modelSelection.includes('nvidia')) {
-      finalResponse = await callOpenRouter(prompt, 'nvidia/llama-3.1-nemotron-70b-instruct:free');
-    } else {
-      if (GEMINI_KEY) finalResponse = await callGemini(prompt, 'flash');
-      else if (GROQ_KEY) finalResponse = await callGroq(prompt);
-      else if (OPENROUTER_KEY) finalResponse = await callOpenRouter(prompt, 'openrouter/auto');
-      else throw new Error('Please add GEMINI_KEY, GROQ_KEY, or OPENROUTER_KEY in Vercel.');
+
+    if (!result) {
+      throw new Error(`All fallback models exhausted. Last status: ${lastError}`);
     }
 
     return res.status(200).json({
-      reply: finalResponse,
-      response: finalResponse,
-      text: finalResponse
+      reply: result.text,
+      response: result.text,
+      text: result.text,
+      modelUsed: result.engine
     });
+
   } catch (err) {
-    console.error("Satyexa AI API Error:", err.message);
+    console.error("Satyexa AI Waterfall Error:", err.message);
     return res.status(500).json({
-      error: err.message || 'Server error',
-      reply: `⚠️ System Error: ${err.message}`
+      error: err.message,
+      reply: `⚠️ System Notice: ${err.message}`
     });
   }
-}
-
+          }
