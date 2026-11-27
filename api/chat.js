@@ -1,4 +1,5 @@
-const GEMINI_ROOT = 'https://googleapis.com';
+https://generativelanguage.googleapis.com/v1beta/models
+
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 25000) {
   const controller = new AbortController();
@@ -132,7 +133,8 @@ export default async function handler(req, res) {
 
     async function callOpenRouter(userText, modelName = 'openrouter/auto') {
       if (!OPENROUTER_KEY) throw new Error('OPENROUTER_KEY missing in Vercel.');
-      const openRouterUrl = 'https://openrouter.ai';
+    const openRouterUrl = 'https://openrouter.ai/api/v1/chat/completions';
+
       const r = await fetchWithTimeout(openRouterUrl, {
         method: 'POST',
         headers: {
