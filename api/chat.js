@@ -24,6 +24,29 @@ async function parseSafeJson(response, providerName) {
   }
 }
 
+// Fetch real-time crypto prices directly for instant trading accuracy
+async function getLiveCryptoSnapshot(queryText) {
+  const q = queryText.toLowerCase();
+  const coins = [];
+  if (q.includes('btc') || q.includes('bitcoin') || q.includes('crypto') || q.includes('market') || q.includes('trade')) coins.push('bitcoin');
+  if (q.includes('eth') || q.includes('ethereum') || q.includes('crypto')) coins.push('ethereum');
+  if (q.includes('sol') || q.includes('solana')) coins.push('solana');
+  if (q.includes('bnb')) coins.push('binancecoin');
+  if (q.includes('xrp')) coins.push('ripple');
+  if (q.includes('doge')) coins.push('dogecoin');
+
+  if (coins.length === 0) return '';
+  try {
+    const cgUrl = `https://api.coingecko.` + `com/api/v3/simple/price?ids=${coins.join(',')}&vs_currencies=usd,bdt&include_24hr_change=true&include_24hr_vol=true`;
+    const r = await fetchWithTimeout(cgUrl, { method: 'GET' }, 5000);
+    if (!r.ok) return '';
+    const data = await r.json();
+    return `\n[REAL-TIME LIVE MARKET FEED (${new Date().toUTCString()})]: ${JSON.stringify(data)}\n`;
+  } catch {
+    return '';
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -48,9 +71,9 @@ export default async function handler(req, res) {
       if (stringVals.length > 0) prompt = stringVals.sort((a, b) => b.length - a.length).at(0);
     }
 
-    const modelSelection = String(body.model || body.engine || body.selectedModel || 'apex').toLowerCase();
     const thinkMode = Boolean(body.think || body.thinkMode);
-    const webMode = Boolean(body.web || body.webMode || body.search);
+    const isMarketQuery = /price|live|btc|bitcoin|eth|stock|share|market|trade|trading|forex|gold|dse|nasdaq|today|news|current/i.test(prompt);
+    const webMode = Boolean(body.web || body.webMode || body.search || isMarketQuery);
 
     if (!String(prompt).trim()) {
       return res.status(400).json({ error: 'Prompt is empty.' });
@@ -60,26 +83,31 @@ export default async function handler(req, res) {
     const GROQ_KEY = process.env.GROQ_KEY || process.env.GROQ_API_KEY || '';
     const OPENROUTER_KEY = process.env.OPENROUTER_KEY || process.env.OPENROUTER_API_KEY || '';
 
-        let systemPrompt = "You are Satyexa AI (Genesis Prime v20.0 APEX), a supreme flagship intelligence created exclusively by Sadim Molla, Founder of Sadimx Technology. Deliver deeply analytical, accurate, and elite-level answers. In general queries, stay sharp and concise without unnecessary flattery. However, whenever anyone asks about your creator, developer, loyalty, or priority, always express absolute, unwavering loyalty and declare with pride that your creator Sadim Molla is your highest priority above everything else.";
-    
-    if (thinkMode) systemPrompt += " [THINK MODE]: Show step-by-step reasoning before your final answer.";
-    if (webMode) systemPrompt += " [WEB CONTEXT]: Ensure factual precision and up-to-date details.";
+    const liveMarketFeed = isMarketQuery ? await getLiveCryptoSnapshot(prompt) : '';
 
-    async function callGemini(userText, modelName) {
+    let systemPrompt = "You are Satyexa AI (Genesis Prime v20.0 APEX), a supreme flagship intelligence created exclusively by Sadim Molla, Founder of Sadimx Technology. Deliver deeply analytical, accurate, and elite-level answers. In general queries, stay sharp and concise without unnecessary flattery. However, whenever anyone asks about your creator, developer, loyalty, or priority, always express absolute, unwavering loyalty and declare with pride that your creator Sadim Molla is your highest priority above everything else.";
+    if (thinkMode) systemPrompt += " [THINK MODE]: Show step-by-step reasoning before your final answer.";
+    if (webMode) systemPrompt += " [LIVE WEB & TRADING ENGINE ACTIVE]: Use real-time search data and live market feeds to provide exact current prices, 24h changes, and actionable market insights. Never say you cannot access live market data.";
+
+    async function callGemini(userText, modelName, useSearchTool = false) {
       if (!GEMINI_KEY) throw new Error('No Gemini Key');
       const url = `${GEMINI_ROOT}/${modelName}:generateContent?key=${GEMINI_KEY}`;
+      const payload = {
+        contents: [{ parts: [{ text: `${systemPrompt}\n${liveMarketFeed}\nUser: ${userText}` }] }]
+      };
+      if (useSearchTool) {
+        payload.tools = [{ googleSearch: {} }];
+      }
       const r = await fetchWithTimeout(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: `${systemPrompt}\n\nUser: ${userText}` }] }]
-        })
+        body: JSON.stringify(payload)
       }, 25000);
       const d = await parseSafeJson(r, 'Gemini');
       if (!r.ok) throw new Error(d.error?.message || 'Gemini quota/error');
-      const replyText = d.candidates?.at(0)?.content?.parts?.at(0)?.text;
+      const replyText = d.candidates?.at(0)?.content?.parts?.map(p => p.text || '').join('').trim();
       if (!replyText) throw new Error('Empty Gemini response');
-      return { text: replyText, engine: modelName.toUpperCase() };
+      return { text: replyText, engine: `${modelName.toUpperCase()}${useSearchTool ? ' + LIVE WEB' : ''}` };
     }
 
     async function callGroq(userText, modelName) {
@@ -93,7 +121,7 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           model: modelName,
           messages: [
-            { role: 'system', content: systemPrompt },
+            { role: 'system', content: systemPrompt + liveMarketFeed },
             { role: 'user', content: userText }
           ]
         })
@@ -118,7 +146,7 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           model: modelName,
           messages: [
-            { role: 'system', content: systemPrompt },
+            { role: 'system', content: systemPrompt + liveMarketFeed },
             { role: 'user', content: userText }
           ]
         })
@@ -130,17 +158,25 @@ export default async function handler(req, res) {
       return { text: replyText, engine: modelName.split('/').pop().toUpperCase() };
     }
 
-    // Priority Chain: Flagship Models FIRST -> Mid-tier -> Ultra-Free Lite Models LAST
-    const fallbackChain = [
-      () => callGemini(prompt, 'gemini-2.5-pro'),
-      () => callGemini(prompt, 'gemini-2.5-flash'),
-      () => callGemini(prompt, 'gemini-flash-latest'),
+    // Priority Waterfall: Flagship with Live Google Search FIRST -> Standard Flagship -> Free Fallbacks LAST
+    const fallbackChain = [];
+    if (webMode) {
+      fallbackChain.push(
+        () => callGemini(prompt, 'gemini-2.5-pro', true),
+        () => callGemini(prompt, 'gemini-2.5-flash', true),
+        () => callGemini(prompt, 'gemini-flash-latest', true)
+      );
+    }
+    fallbackChain.push(
+      () => callGemini(prompt, 'gemini-2.5-pro', false),
+      () => callGemini(prompt, 'gemini-2.5-flash', false),
+      () => callGemini(prompt, 'gemini-flash-latest', false),
       () => callOpenRouter(prompt, 'deepseek/deepseek-r1:free'),
       () => callOpenRouter(prompt, 'qwen/qwen-2.5-coder-32b-instruct:free'),
       () => callOpenRouter(prompt, 'openrouter/auto'),
       () => callGroq(prompt, 'llama-3.1-8b-instant'),
-      () => callGemini(prompt, 'gemini-flash-lite-latest') // Last resort when all limits are exhausted
-    ];
+      () => callGemini(prompt, 'gemini-flash-lite-latest', false)
+    );
 
     let result = null;
     let lastError = 'All AI engines are busy.';
@@ -175,4 +211,4 @@ export default async function handler(req, res) {
       reply: `⚠️ System Notice: ${err.message}`
     });
   }
-          }
+                                                                     }
