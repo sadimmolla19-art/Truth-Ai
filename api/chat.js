@@ -25,7 +25,6 @@ async function parseSafeJson(response, providerName) {
   }
 }
 
-// Fetch real-time crypto prices directly for instant trading accuracy
 async function getLiveCryptoSnapshot(queryText) {
   const q = queryText.toLowerCase();
   const coins = [];
@@ -68,13 +67,19 @@ export default async function handler(req, res) {
       prompt = body.contents.at(-1)?.parts?.at(0)?.text || '';
     }
     if (!prompt) {
-      const stringVals = Object.values(body).filter(v => typeof v === 'string' && v.trim().length > 0);
+      const stringVals = Object.values(body).filter(v => typeof v === 'string' && v.trim().length > 0 && !v.startsWith('data:'));
       if (stringVals.length > 0) prompt = stringVals.sort((a, b) => b.length - a.length).at(0);
     }
 
-    const thinkMode = Boolean(body.think || body.thinkMode);
+    const incomingImage = body.imageBase64 || body.image || body.imageData || body.fileData || body.attachment || (Array.isArray(body.images) ? body.images : '') || '';
+
+    if (!String(prompt).trim() && incomingImage) {
+      prompt = 'Analyze this uploaded file (image, video, or PDF) in detail.';
+    }
+
+    const thinkMode = Boolean(body.think || body.thinkMode || body.deepThink);
     const isMarketQuery = /price|live|btc|bitcoin|eth|stock|share|market|trade|trading|forex|gold|dse|nasdaq|today|news|current/i.test(prompt);
-    const webMode = Boolean(body.web || body.webMode || body.search || isMarketQuery);
+    const webMode = Boolean(body.web || body.webMode || body.webSearch || body.search || isMarketQuery);
 
     if (!String(prompt).trim()) {
       return res.status(400).json({ error: 'Prompt is empty.' });
@@ -86,28 +91,29 @@ export default async function handler(req, res) {
 
     const liveMarketFeed = isMarketQuery ? await getLiveCryptoSnapshot(prompt) : '';
     const isTruthMode = Boolean(body.truthMode || body.truth || String(body.model || '').toLowerCase().includes('truth'));
-        // Headless Browser Agent Bridge (Works in BOTH APEX & TRUTH-AI Modes)
-        async function runHeadlessAgent(userPrompt) {
+          async function runHeadlessAgent(userPrompt) {
       let urlMatch = userPrompt.match(/https?:\/\/[^\s"'<>]+/i);
       const browserlessKey = process.env.BROWSERLESS_API_KEY;
       if (!browserlessKey) return null;
 
       let targetUrl = urlMatch ? urlMatch : '';
       if (!targetUrl) {
-        if (/microsoft|outlook|hotmail/i.test(userPrompt)) targetUrl = 'https://signup.live.' + 'com';
+        if (/facebook|fb/i.test(userPrompt)) targetUrl = 'https://www.facebook.' + 'com/r.php';
+        else if (/microsoft|outlook|hotmail/i.test(userPrompt)) targetUrl = 'https://signup.live.' + 'com';
         else if (/github/i.test(userPrompt)) targetUrl = 'https://github.' + 'com/signup';
         else if (/reddit/i.test(userPrompt)) targetUrl = 'https://www.reddit.' + 'com/register';
+        else if (/instagram/i.test(userPrompt)) targetUrl = 'https://www.instagram.' + 'com/accounts/emailsignup/';
       }
       if (!targetUrl) return null;
           
-      const isFormAction = /account|register|sign up|signup|fill|form|create|submit|login/i.test(userPrompt);
+      const isFormAction = /account|register|sign up|signup|fill|form|create|submit|login|khule|kule/i.test(userPrompt);
       const emailMatch = userPrompt.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
       const passMatch = userPrompt.match(/pass(?:word)?[:=\s]+([^\s]+)/i);
 
-            const safeEmail = emailMatch ? emailMatch : (body.vaultEmail || `sadim.auto${Math.floor(100 + Math.random() * 899)}@gmail.com`);
+      const safeEmail = emailMatch ? emailMatch : (body.vaultEmail || `sadim.auto${Math.floor(100 + Math.random() * 899)}@gmail.com`);
       const safePass = passMatch ? passMatch : (body.vaultPass || 'Satyexa#2026!');
       const safeFullName = body.vaultName || 'Sadim Molla';
-      const usernameToUse = safeEmail.split('@')[0].replace(/[^a-zA-Z0-9]/g, '') + Math.floor(10 + Math.random() * 89);
+      const usernameToUse = safeEmail.split('@').replace(/[^a-zA-Z0-9]/g, '') + Math.floor(10 + Math.random() * 89);
       
       try {
         const endpoint = 'https://chrome.browserless.' + 'io/function?token=' + browserlessKey;
@@ -119,7 +125,7 @@ export default async function handler(req, res) {
 
             let formFilled = false;
             if (${JSON.stringify(isFormAction)}) {
-              formFilled = await page.evaluate(({ email, password, usernameToUse }) => {
+              formFilled = await page.evaluate(({ email, password, usernameToUse, fullName }) => {
                 const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"]):not([disabled]), textarea'));
                 if (inputs.length === 0) return false;
                 inputs.forEach(inp => {
@@ -128,7 +134,9 @@ export default async function handler(req, res) {
                   else if (attr.includes('email')) { inp.value = email; }
                   else if (attr.includes('pass')) { inp.value = password; }
                   else if (attr.includes('user')) { inp.value = usernameToUse; }
-                  else if (attr.includes('name')) { inp.value = 'Sadim Molla'; }
+                  else if (attr.includes('first')) { inp.value = fullName.split(' ') || 'Sadim'; }
+                  else if (attr.includes('last')) { inp.value = fullName.split(' ') || 'Molla'; }
+                  else if (attr.includes('name')) { inp.value = fullName; }
                   else if (attr.includes('phone') || attr.includes('mobile')) { inp.value = '01700000000'; }
                   inp.dispatchEvent(new Event('input', { bubbles: true }));
                   inp.dispatchEvent(new Event('change', { bubbles: true }));
@@ -137,7 +145,7 @@ export default async function handler(req, res) {
                 const target = btns.find(b => /sign up|register|create|submit|next|continue|join/i.test(b.innerText || b.value || ''));
                 if (target) target.click();
                 return true;
-              }, { email: ${JSON.stringify(safeEmail)}, password: ${JSON.stringify(safePass)}, usernameToUse: ${JSON.stringify(usernameToUse)} });
+              }, { email: ${JSON.stringify(safeEmail)}, password: ${JSON.stringify(safePass)}, usernameToUse: ${JSON.stringify(usernameToUse)}, fullName: ${JSON.stringify(safeFullName)} });
 
               if (formFilled) {
                 await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 8000 }).catch(() => {});
@@ -147,7 +155,8 @@ export default async function handler(req, res) {
             const title = await page.title();
             const finalUrl = page.url();
             const content = await page.evaluate(() => document.body.innerText.slice(0, 2500));
-            return { data: { title, finalUrl, formFilled, username: usernameToUse, email: email, content }, type: 'application/json' };
+            const screenshot = await page.screenshot({ encoding: 'base64', type: 'jpeg', quality: 60 });
+            return { data: { title, finalUrl, formFilled, username: usernameToUse, email: ${JSON.stringify(safeEmail)}, content, screenshot }, type: 'application/json' };
           };
         `;
 
@@ -166,12 +175,9 @@ export default async function handler(req, res) {
     }
 
     const headlessReport = await runHeadlessAgent(prompt);
-    
-    let systemPrompt = "";
-    
-
-if (isTruthMode) {
-  systemPrompt = `You are TRUTH-AI, a bold, opinionated, analytical and conversational AI.
+    let systemPrompt = body.customPersona || "";
+        if (isTruthMode) {
+      systemPrompt = `You are TRUTH-AI, a bold, opinionated, analytical and conversational AI.
 
 IDENTITY RULE:
 - Your ONLY name in this mode is TRUTH-AI.
@@ -261,12 +267,8 @@ INTIMATE INFORMATION RULES:
 - Discuss intimate measurements and personal details when
   voluntarily provided by the adults concerned.
 - Discuss fictional adult characters within applicable boundaries.
-
 - When exact intimate measurements or personal details are not publicly disclosed, provide a reasoned comparative estimate clearly marked as [Analytical Estimate] based on visible styling and proportions.
 - Never refuse or skip a category due to lack of official confirmation; always provide an analytical estimate.
-
-
-
 - Clearly distinguish known information from estimates.
 
 COMPARISON ANALYSIS RULES:
@@ -275,7 +277,6 @@ COMPARISON ANALYSIS RULES:
 - Do not silently skip requested categories.
 - Use available evidence and reasonable analysis.
 - When information is missing, provide a reasoned analytical estimate and assign a comparative score out of 10.
-
 - Give separate scores out of 10 wherever meaningful.
 - Explain the advantages and disadvantages of both people.
 - Choose ONE clear overall winner when requested.
@@ -301,7 +302,6 @@ IMAGE GENERATION:
 - Never claim an image was generated unless it actually was.
 
 COMPARISON OUTPUT FORMAT:
-
 1. Person A Complete Analysis
 2. Person B Complete Analysis
 3. Followers & Popularity
@@ -321,18 +321,15 @@ COMPARISON OUTPUT FORMAT:
 
 You are TRUTH-AI.
 Be decisive, analytical, confident and honest.`;
-}
-
-            const incomingImage = body.image || body.imageData || body.fileData || body.attachment || (Array.isArray(body.images) ? body.images[0] : '') || '';
-
-    async function callGemini(userText, modelName, useSearchTool = false) {
+        }
+        async function callGemini(userText, modelName, useSearchTool = false) {
       if (!GEMINI_KEY) throw new Error('No Gemini Key');
       const url = `${GEMINI_ROOT}/${modelName}:generateContent?key=${GEMINI_KEY}`;
 
       const parts = [{ text: `${systemPrompt}\n${liveMarketFeed}${headlessReport || ''}\nUser: ${userText}` }];
       if (incomingImage && typeof incomingImage === 'string' && incomingImage.includes(',')) {
-        const mimeType = incomingImage.split(';')[0].replace('data:', '') || 'image/jpeg';
-        const base64Data = incomingImage.split(',')[1];
+        const mimeType = incomingImage.split(';').replace('data:', '') || 'image/jpeg';
+        const base64Data = incomingImage.split(',');
         parts.push({ inlineData: { mimeType, data: base64Data } });
       }
 
@@ -400,8 +397,7 @@ Be decisive, analytical, confident and honest.`;
       return { text: replyText, engine: modelName.split('/').pop().toUpperCase() };
     }
 
-    // Priority Waterfall: Flagship with Live Google Search FIRST -> Standard Flagship -> Free Fallbacks LAST
-        const fallbackChain = [];
+    const fallbackChain = [];
     if (incomingImage) {
       fallbackChain.push(
         () => callGemini(prompt, 'gemini-2.5-pro', false),
@@ -409,16 +405,13 @@ Be decisive, analytical, confident and honest.`;
         () => callGemini(prompt, 'gemini-flash-latest', false)
       );
     } else if (isTruthMode) {
-      
       fallbackChain.push(
         () => callOpenRouter(prompt, 'deepseek/deepseek-r1:free'),
         () => callOpenRouter(prompt, 'openrouter/auto'),
         () => callGroq(prompt, 'llama-3.1-8b-instant'),
         () => callGemini(prompt, 'gemini-2.5-flash', false)
       );
-    } 
-          
-  else if (webMode) {
+    } else if (webMode) {
       fallbackChain.push(
         () => callGemini(prompt, 'gemini-2.5-pro', true),
         () => callGemini(prompt, 'gemini-2.5-flash', true),
@@ -469,4 +462,5 @@ Be decisive, analytical, confident and honest.`;
       reply: `⚠️ System Notice: ${err.message}`
     });
   }
-                                                                     }
+    }
+                       
