@@ -382,8 +382,6 @@ Be decisive, analytical, confident and honest.`;
       if (!replyText) throw new Error('Empty OpenRouter response');
       return { text: replyText, engine: modelName.split('/').pop().toUpperCase() };
     }
-    
-    }
 
     // Priority Waterfall: Flagship with Live Google Search FIRST -> Standard Flagship -> Free Fallbacks LAST
     const fallbackChain = [];
