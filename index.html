@@ -1279,6 +1279,63 @@ setInterval(function() {
   };
 })();
 </script>
+  <!-- SATYEXA AUTO-ACCOUNT VAULT (GMAIL PRESET) & VISION BRIDGE -->
+<script>
+(function() {
+  // 1. Add Auto-Account Vault Button to Top Bar
+  function injectVaultBtn() {
+    const webBtn = Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes('Web:'));
+    if (webBtn && !document.getElementById('autoVaultBtn')) {
+      const btn = document.createElement('button');
+      btn.id = 'autoVaultBtn';
+      btn.type = 'button';
+      btn.style.cssText = 'background:#064e3b; color:#6ee7b7; border:1px solid #10b981; padding:4px 9px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; margin-right:6px;';
+      btn.innerText = '🤖 Vault';
+      btn.onclick = function() {
+        const savedEmail = localStorage.getItem('satyexa_vault_email') || '';
+        const savedPass = localStorage.getItem('satyexa_vault_pass') || 'Satyexa@2026!';
+        const savedName = localStorage.getItem('satyexa_vault_name') || 'Sadim Molla';
+
+        const newEmail = prompt('Enter Default Gmail for Auto-Account Creation:', savedEmail);
+        if (newEmail === null) return;
+        const newName = prompt('Enter Full Name for Forms:', savedName);
+        if (newName === null) return;
+        const newPass = prompt('Enter Default Password for New Accounts:', savedPass);
+        if (newPass === null) return;
+
+        localStorage.setItem('satyexa_vault_email', newEmail.trim());
+        localStorage.setItem('satyexa_vault_name', newName.trim());
+        localStorage.setItem('satyexa_vault_pass', newPass.trim());
+        alert('✅ Auto-Account Vault Saved!\nGmail: ' + newEmail + '\nNow just send any website link in chat to auto-create an account!');
+      };
+      webBtn.parentNode.insertBefore(btn, webBtn);
+    }
+  }
+  injectVaultBtn();
+  setInterval(injectVaultBtn, 1000);
+
+  // 2. Automatically inject saved Gmail/Password & attached image into /api/chat requests
+  const origFetch = window.fetch;
+  window.fetch = async function(resource, config) {
+    if (typeof resource === 'string' && resource.includes('/api/chat') && config && config.body) {
+      try {
+        const bodyObj = JSON.parse(config.body);
+        bodyObj.vaultEmail = localStorage.getItem('satyexa_vault_email') || '';
+        bodyObj.vaultName = localStorage.getItem('satyexa_vault_name') || 'Sadim Molla';
+        bodyObj.vaultPass = localStorage.getItem('satyexa_vault_pass') || 'Satyexa@2026!';
+
+        // Ensure attached preview image is always passed to backend for Vision
+        const previewImg = document.querySelector('#imagePreview img, .preview-img, img[src^="data:image"]');
+        if (!bodyObj.image && previewImg && previewImg.src && previewImg.src.startsWith('data:image')) {
+          bodyObj.image = previewImg.src;
+        }
+        config.body = JSON.stringify(bodyObj);
+      } catch (e) {}
+    }
+    return origFetch.apply(this, arguments);
+  };
+})();
+</script>
   
 </body>
 </html>
