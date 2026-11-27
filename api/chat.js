@@ -48,16 +48,30 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const body = req.body || {};
-    const prompt = body.prompt || body.message || body.query || (Array.isArray(body.messages) ? body.messages.at(-1)?.content : '') || '';
-    const modelSelection = String(body.model || body.engine || 'apex').toLowerCase();
-    const thinkMode = Boolean(body.think);
-    const webMode = Boolean(body.web);
-
-    if (!prompt.trim()) {
-      return res.status(400).json({ error: 'Prompt is empty.' });
+    const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+    
+    // Automatically detect prompt from any frontend key format
+    let prompt = body.prompt || body.message || body.query || body.text || body.input || body.content || body.userPrompt || '';
+    if (!prompt && Array.isArray(body.messages) && body.messages.length > 0) {
+      const lastMsg = body.messages[body.messages.length - 1];
+      prompt = typeof lastMsg === 'string' ? lastMsg : (lastMsg?.content || lastMsg?.text || '');
+    }
+    if (!prompt && Array.isArray(body.contents) && body.contents.length > 0) {
+      prompt = body.contents[body.contents.length - 1]?.parts?.[0]?.text || '';
+    }
+    // Fallback: grab the longest string value in body if key name is custom
+    if (!prompt) {
+      const stringVals = Object.values(body).filter(v => typeof v === 'string' && v.trim().length > 0);
+      if (stringVals.length > 0) prompt = stringVals.sort((a, b) => b.length - a.length)[0];
     }
 
+    const modelSelection = String(body.model || body.engine || body.selectedModel || 'apex').toLowerCase();
+    const thinkMode = Boolean(body.think || body.thinkMode);
+    const webMode = Boolean(body.web || body.webMode || body.search);
+
+    if (!String(prompt).trim()) {
+      return res.status(400).json({ error: `Prompt is empty. Received keys: ${Object.keys(body).join(', ')}` });
+    }
     const GEMINI_KEY = process.env.GEMINI_KEY || process.env.GEMINI_API_KEY || '';
     const GROQ_KEY = process.env.GROQ_KEY || process.env.GROQ_API_KEY || '';
     const OPENROUTER_KEY = process.env.OPENROUTER_KEY || process.env.OPENROUTER_API_KEY || '';
