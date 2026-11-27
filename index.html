@@ -1294,6 +1294,141 @@ function sxToggleMon(){const b=document.getElementById('sx-mon-btn');if(sxTimer)
 async function sxScanMarket(auto){const s=document.getElementById('st-sym').value.trim(),box=document.getElementById('st-box'),log=document.getElementById('st-log');if(!auto)box.innerHTML='⏳ Scanning live market...';try{const r=await fetch('/api/trader',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'analyze',symbol:s})}),d=await r.json();if(!d.success){box.innerHTML='❌ '+d.error;return;}const c=d.signal.includes('BUY')?'#10b981':(d.signal.includes('SELL')?'#ef4444':'#fbbf24');box.style.borderLeftColor=c;box.innerHTML=`<div style="display:flex;justify-content:space-between;"><b>${d.symbol}: ${d.price}</b><span style="background:${c};color:#000;padding:2px 8px;border-radius:6px;font-weight:bold;">${d.signal}</span></div><div style="margin-top:5px;">${d.reason}</div><div style="margin-top:4px;font-size:11px;color:#9ca3af;">24h: ${d.change24h} | SMA20: ${d.sma20}</div>`;if(d.signal==='STRONG BUY'||d.signal==='STRONG SELL'){const side=d.signal==='STRONG BUY'?'BUY':'SELL';if('Notification'in window&&Notification.permission==='granted')new Notification(`🚨 ${d.signal}: ${d.symbol}`,{body:d.reason});if(document.getElementById('sx-t-chk').checked){log.innerText=`⏳ Executing ${side}...`;const t=await fetch('/api/trader',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'trade',exchange:document.getElementById('st-ex').value,symbol:d.symbol,side,quantity:document.getElementById('st-qty').value,apiKey:document.getElementById('st-key').value.trim(),apiSecret:document.getElementById('st-sec').value.trim(),customWebhookUrl:document.getElementById('st-wh').value.trim(),useTestnet:document.getElementById('st-net').value==='true'})}),u=await t.json();log.innerText=u.success?`✅ ${u.message}`:`❌ ${u.error}`;}}}catch(e){box.innerHTML='❌ '+e.message;}}
 </script>
 
+<!-- Satyexa Full AI Market & Autonomous Trading Bot UI -->
+<div id="satyexa-trader-modal" style="display:none; position:fixed; inset:0; background:rgba(2,6,23,0.92); z-index:99999; overflow-y:auto; padding:16px; font-family:sans-serif; color:#f8fafc;">
+  <div style="max-width:480px; margin:20px auto; background:#0f172a; border:1px solid #0d9488; border-radius:14px; padding:18px; box-shadow:0 20px 40px rgba(0,0,0,0.6);">
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #1e293b; padding-bottom:12px; margin-bottom:14px;">
+      <h3 style="margin:0; font-size:17px; color:#2dd4bf;">📈 AI Market & Autonomous Bot</h3>
+      <button onclick="document.getElementById('satyexa-trader-modal').style.display='none'" style="background:#ef4444; color:#fff; border:none; border-radius:6px; padding:4px 10px; font-weight:bold; cursor:pointer;">✕</button>
+    </div>
+
+    <!-- Exchange & Pair Selection -->
+    <label style="font-size:12px; color:#94a3b8;">Select Exchange / App:</label>
+    <select id="stx-exchange" style="width:100%; padding:10px; margin:5px 0 12px; border-radius:8px; background:#1e293b; color:#fff; border:1px solid #334155;">
+      <option value="binance">Binance (Spot / Futures)</option>
+      <option value="bybit">Bybit</option>
+      <option value="okx">OKX</option>
+      <option value="kucoin">KuCoin</option>
+      <option value="mexc">MEXC</option>
+    </select>
+
+    <div style="display:flex; gap:8px; margin-bottom:12px;">
+      <div style="flex:1;">
+        <label style="font-size:12px; color:#94a3b8;">Trading Pair:</label>
+        <input id="stx-symbol" value="BTCUSDT" style="width:100%; padding:9px; margin-top:4px; border-radius:8px; background:#1e293b; color:#fff; border:1px solid #334155; box-sizing:border-box;">
+      </div>
+      <div style="flex:1;">
+        <label style="font-size:12px; color:#94a3b8;">Trade Amount (USDT):</label>
+        <input id="stx-amount" type="number" value="20" style="width:100%; padding:9px; margin-top:4px; border-radius:8px; background:#1e293b; color:#fff; border:1px solid #334155; box-sizing:border-box;">
+      </div>
+    </div>
+
+    <!-- Exchange API Keys -->
+    <input id="stx-api-key" type="password" placeholder="Enter Exchange API Key..." style="width:100%; padding:9px; margin-bottom:8px; border-radius:8px; background:#1e293b; color:#fff; border:1px solid #334155; box-sizing:border-box;">
+    <input id="stx-api-secret" type="password" placeholder="Enter Exchange Secret Key..." style="width:100%; padding:9px; margin-bottom:12px; border-radius:8px; background:#1e293b; color:#fff; border:1px solid #334155; box-sizing:border-box;">
+
+    <!-- Auto-Bot ON/OFF Toggle -->
+    <div style="background:#1e293b; padding:12px; border-radius:10px; border:1px solid #334155; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <div style="font-weight:bold; font-size:14px; color:#facc15;">🤖 Autonomous Auto-Trade Bot</div>
+        <div id="stx-bot-desc" style="font-size:11px; color:#94a3b8;">OFF: Sends instant Buy/Sell notification alerts only</div>
+      </div>
+      <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:bold; color:#38bdf8;">
+        <input id="stx-auto-toggle" type="checkbox" onchange="window._toggleStxBot(this.checked)" style="width:20px; height:20px; accent-color:#10b981;">
+        <span id="stx-toggle-label">OFF</span>
+      </label>
+    </div>
+
+    <button onclick="window._runStxMarketScan()" style="width:100%; padding:11px; border-radius:8px; border:none; background:linear-gradient(90deg,#0d9488,#059669); color:#fff; font-weight:bold; font-size:14px; cursor:pointer;">⚡ Analyze Live Market & Execute / Notify</button>
+
+    <div id="stx-trade-output" style="margin-top:12px; padding:10px; border-radius:8px; background:#020617; border:1px solid #1e293b; font-size:12px; color:#cbd5e1; white-space:pre-wrap; min-height:60px;">Ready to scan live market data...</div>
+  </div>
+</div>
+
+<script>
+(function() {
+  let botInterval = null;
+
+  // Request browser notification permission for Signal Alerts
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+
+  window._toggleStxBot = function(isOn) {
+    const lbl = document.getElementById('stx-toggle-label');
+    const desc = document.getElementById('stx-bot-desc');
+    lbl.innerText = isOn ? 'ON' : 'OFF';
+    lbl.style.color = isOn ? '#10b981' : '#f87171';
+    desc.innerText = isOn 
+      ? 'ON: Bot will execute real trades automatically on signal!' 
+      : 'OFF: Sends instant Buy/Sell notification alerts only';
+
+    if (botInterval) clearInterval(botInterval);
+    if (isOn) {
+      window._runStxMarketScan();
+      botInterval = setInterval(window._runStxMarketScan, 60000); // Scan every 60s when ON
+    }
+  };
+
+  window._runStxMarketScan = async function() {
+    const out = document.getElementById('stx-trade-output');
+    const exchange = document.getElementById('stx-exchange').value;
+    const symbol = document.getElementById('stx-symbol').value.trim().toUpperCase();
+    const amount = Number(document.getElementById('stx-amount').value) || 20;
+    const apiKey = document.getElementById('stx-api-key').value.trim();
+    const apiSecret = document.getElementById('stx-api-secret').value.trim();
+    const autoExecute = document.getElementById('stx-auto-toggle').checked;
+
+    out.innerText = `⏳ Scanning ${symbol} on ${exchange.toUpperCase()}...`;
+
+    try {
+      const res = await fetch('/api/trade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'auto_signal_and_trade',
+          exchange, symbol, amount, apiKey, apiSecret, autoExecute
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        out.innerText = '❌ Error: ' + (data.error || 'Failed to fetch market data');
+        return;
+      }
+
+      const msg = `📊 ${data.symbol} | Price: ${data.currentPrice} | 24h: ${data.priceChangePercent}%\n🧠 AI Signal: ${data.signal} (${data.confidence}% confidence)\n📝 ${data.reason}\n⚡ Status: ${data.executionStatus}`;
+      out.innerText = msg;
+
+      // Send Notification Alert when Auto-Trade is OFF & Buy/Sell signal triggers
+      if (!autoExecute && (data.signal === 'BUY' || data.signal === 'SELL')) {
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification(`🚨 Satyexa Trade Signal: ${data.signal} ${data.symbol}`, {
+            body: `Price: ${data.currentPrice} | Confidence: ${data.confidence}%`
+          });
+        }
+        alert(`🔔 TRADE ALERT (${data.exchange.toUpperCase()}): ${data.signal} ${data.symbol} at ${data.currentPrice}\n${data.reason}`);
+      }
+    } catch (err) {
+      out.innerText = '⚠️ Network Error: ' + err.message;
+    }
+  };
+
+  // Override sidebar Market button click to open this exact modal
+  setInterval(() => {
+    const mBtn = document.getElementById('satyexa-ws-market');
+    if (mBtn && !mBtn.dataset.patched) {
+      mBtn.dataset.patched = 'true';
+      mBtn.onclick = function(e) {
+        e.stopPropagation();
+        const closeBtn = Array.from(document.querySelectorAll('button, div, span')).find(el => (el.innerText || '').trim() === '✕' || (el.innerText || '').trim() === '×');
+        if (closeBtn) closeBtn.click();
+        document.getElementById('satyexa-trader-modal').style.display = 'block';
+      };
+    }
+  }, 500);
+})();
+</script>
+
 </body>
   <script>
   if ('serviceWorker' in navigator) {
