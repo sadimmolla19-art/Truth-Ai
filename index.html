@@ -1045,6 +1045,193 @@ setInterval(function() {
   }
 }, 500);
 </script>
+  <!-- SATYEXA RESTORED FEATURES: UNIVERSAL LIVE RUN (HTML/JS + PYTHON), COPY CODE & VOICE TOGGLE -->
+<script>
+(function() {
+  let isSpeaking = false;
+  let activeSpeakBtn = null;
+  let pyodideReadyPromise = null;
+
+  // 1. Voice Listen ON/OFF Toggle Logic
+  window.speakText = function(encoded, btnEl) {
+    if (!('speechSynthesis' in window)) return alert('Text-to-Speech is not supported in this browser.');
+
+    // If already speaking, turn OFF
+    if (isSpeaking || window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+      isSpeaking = false;
+      if (activeSpeakBtn) activeSpeakBtn.innerText = '🔊 Listen';
+      if (btnEl && btnEl === activeSpeakBtn) {
+        activeSpeakBtn = null;
+        return;
+      }
+    }
+
+    let clean = decodeURIComponent(encoded)
+      .replace(/```[\s\(\S\)]*?```/g, ' Code snippet. ')
+      .replace(/[#*`$~_>]/g, '')
+      .trim();
+    if (!clean) return;
+
+    const utter = new SpeechSynthesisUtterance(clean);
+    utter.lang = /[\u0980-\u09FF]/.test(clean) ? 'bn-BD' : 'en-US';
+
+    utter.onstart = function() {
+      isSpeaking = true;
+      if (btnEl) {
+        activeSpeakBtn = btnEl;
+        btnEl.innerText = '⏹ Stop Audio';
+      }
+    };
+    utter.onend = utter.onerror = function() {
+      isSpeaking = false;
+      if (activeSpeakBtn) activeSpeakBtn.innerText = '🔊 Listen';
+      activeSpeakBtn = null;
+    };
+
+    window.speechSynthesis.speak(utter);
+  };
+
+  // 2. Copy Code Only Function
+  window.copyOnlyCode = function(btn, encodedCode) {
+    const code = decodeURIComponent(encodedCode);
+    navigator.clipboard.writeText(code);
+    const oldText = btn.innerText;
+    btn.innerText = '✅ Code Copied';
+    setTimeout(() => { btn.innerText = oldText; }, 1600);
+  };
+
+  // 3. Universal Live Run Engine (HTML/CSS/JS + Python in Browser)
+  window.executeUniversalLiveRun = async function(encodedCode, langHint) {
+    const rawCode = decodeURIComponent(encodedCode).trim();
+    const modal = document.getElementById('sandboxModal');
+    const frame = document.getElementById('sandboxFrame');
+    if (!modal || !frame) return;
+
+    modal.classList.remove('hidden');
+
+    const isPython = langHint === 'python' ||
+      (!rawCode.includes('<html') && !rawCode.includes('<!DOCTYPE') && !rawCode.includes('<div') &&
+      (rawCode.includes('print(') || rawCode.includes('def ') || rawCode.includes('import ') || rawCode.includes('input(')));
+
+    if (!isPython) {
+      // Run HTML / CSS / JavaScript directly in Sandbox
+      const htmlDoc = rawCode.includes('<html') || rawCode.includes('<!DOCTYPE')
+        ? rawCode
+        : `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:sans-serif;padding:16px;background:#0f172a;color:#f8fafc;}</style></head><body>${rawCode}</body></html>`;
+      frame.srcdoc = htmlDoc;
+      return;
+    }
+
+    // Run Python directly in Browser via Pyodide
+    frame.srcdoc = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body { margin:0; padding:16px; background:#020617; color:#10b981; font-family:monospace; font-size:14px; }
+          .header { color:#38bdf8; border-bottom:1px solid #1e293b; padding-bottom:8px; margin-bottom:12px; font-weight:bold; }
+          pre { white-space:pre-wrap; word-break:break-word; margin:0; line-height:1.5; }
+          .err { color:#f87171; }
+        </style>
+      </head>
+      <body>
+        <div class="header">🐍 Satyexa Python Live Console</div>
+        <pre id="py-out">⏳ Initializing Python Runtime Engine...</pre>
+      </body>
+      </html>
+    `;
+
+    frame.onload = async function() {
+      const outEl = frame.contentDocument.getElementById('py-out');
+      try {
+        if (!window.loadPyodide) {
+          await new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = 'https://jsdelivr.net' + 'pyodide/v0.26.2/full/pyodide.js';
+            s.onload = resolve;
+            s.onerror = reject;
+            document.head.appendChild(s);
+          });
+        }
+        if (!pyodideReadyPromise) {
+          pyodideReadyPromise = window.loadPyodide();
+        }
+        const pyodide = await pyodideReadyPromise;
+        outEl.innerText = '▶ Running Python Code...\n\n';
+
+        let outputBuffer = '';
+        pyodide.setStdout({ batched: (msg) => { outputBuffer += msg + '\n'; outEl.innerText = outputBuffer; } });
+        pyodide.setStderr({ batched: (msg) => { outputBuffer += '⚠️ ' + msg + '\n'; outEl.innerText = outputBuffer; } });
+
+        // Support Python input() via browser prompt
+        pyodide.globals.set('input', (promptText) => window.prompt(promptText || 'Enter Python input:') || '');
+
+        await pyodide.runPythonAsync(rawCode);
+        if (!outputBuffer.trim()) {
+          outEl.innerText = '✅ Execution finished (No console output).';
+        }
+      } catch (err) {
+        outEl.className = 'err';
+        outEl.innerText = '❌ Python Error:\n' + err.message;
+      }
+    };
+  };
+
+  // 4. Auto-attach Live Run, Copy Code & Toggle Listen buttons below every AI message with code
+  setInterval(function() {
+    document.querySelectorAll('.msg-wrap.ai-wrap').forEach(wrap => {
+      const actionsBar = wrap.querySelector('.msg-actions');
+      const preBlock = wrap.querySelector('pre');
+      if (!actionsBar) return;
+
+      // Upgrade Listen button to pass 'this' for ON/OFF toggle
+      const listenBtn = Array.from(actionsBar.querySelectorAll('button')).find(b => b.innerText.includes('Listen'));
+      if (listenBtn && !listenBtn.dataset.toggleUpgraded) {
+        listenBtn.dataset.toggleUpgraded = 'true';
+        const oldAttr = listenBtn.getAttribute('onclick') || '';
+        const matchEnc = oldAttr.match(/speakText\('([^']+)'\)/);
+        if (matchEnc) {
+          listenBtn.setAttribute('onclick', `speakText('${matchEnc[1]}', this)`);
+        }
+      }
+
+      // Add "Copy Code" and "▶ Live Run" if message contains a code block
+      if (preBlock && !actionsBar.dataset.codeToolsAdded) {
+        actionsBar.dataset.codeToolsAdded = 'true';
+        let rawCodeText = preBlock.innerText.trim();
+        let lang = 'auto';
+
+        // Strip language header line (e.g., "python", "html", "javascript") if present
+        const firstLine = rawCodeText.split('\n')[0].trim().toLowerCase();
+        if (['python', 'py', 'html', 'js', 'javascript', 'css'].includes(firstLine)) {
+          lang = (firstLine === 'py' || firstLine === 'python') ? 'python' : 'web';
+          rawCodeText = rawCodeText.split('\n').slice(1).join('\n').trim();
+        }
+
+        const encCode = encodeURIComponent(rawCodeText);
+
+        // Copy Code Button
+        const copyCodeBtn = document.createElement('button');
+        copyCodeBtn.type = 'button';
+        copyCodeBtn.className = 'mini-btn';
+        copyCodeBtn.innerText = '📄 Copy Code';
+        copyCodeBtn.setAttribute('onclick', `copyOnlyCode(this, '${encCode}')`);
+        actionsBar.appendChild(copyCodeBtn);
+
+        // Live Run Button
+        const liveRunBtn = document.createElement('button');
+        liveRunBtn.type = 'button';
+        liveRunBtn.className = 'mini-btn run-btn';
+        liveRunBtn.innerText = '▶ Live Run';
+        liveRunBtn.setAttribute('onclick', `executeUniversalLiveRun('${encCode}', '${lang}')`);
+        actionsBar.appendChild(liveRunBtn);
+      }
+    });
+  }, 500);
+})();
+    </script>
   
 </body>
 </html>
