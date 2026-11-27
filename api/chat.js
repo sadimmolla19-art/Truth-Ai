@@ -1,5 +1,4 @@
-const GEMINI_ROOT = ['https:/', 'generativelanguage.googleapis.com', 'v1beta', 'models'].join('/');
-
+const GEMINI_ROOT = ['https:/', '://googleapis.com', 'v1beta', 'models'].join('/');
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 25000) {
   const controller = new AbortController();
@@ -14,7 +13,6 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 25000) {
   }
 }
 
-// Your existing auto-model priority logic preserved intact
 async function getAvailableGeminiModels(apiKey) {
   try {
     const r = await fetchWithTimeout(`${GEMINI_ROOT}?key=${apiKey}`, { method: 'GET' }, 6000);
@@ -50,20 +48,18 @@ export default async function handler(req, res) {
 
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
-    
-    // Automatically detect prompt from any frontend key format
+
     let prompt = body.prompt || body.message || body.query || body.text || body.input || body.content || body.userPrompt || '';
     if (!prompt && Array.isArray(body.messages) && body.messages.length > 0) {
       const lastMsg = body.messages[body.messages.length - 1];
       prompt = typeof lastMsg === 'string' ? lastMsg : (lastMsg?.content || lastMsg?.text || '');
     }
     if (!prompt && Array.isArray(body.contents) && body.contents.length > 0) {
-      prompt = body.contents[body.contents.length - 1]?.parts?.[0]?.text || '';
+      prompt = body.contents[body.contents.length - 1]?.parts?.?.text || '';
     }
-    // Fallback: grab the longest string value in body if key name is custom
     if (!prompt) {
       const stringVals = Object.values(body).filter(v => typeof v === 'string' && v.trim().length > 0);
-      if (stringVals.length > 0) prompt = stringVals.sort((a, b) => b.length - a.length)[0];
+      if (stringVals.length > 0) prompt = stringVals.sort((a, b) => b.length - a.length);
     }
 
     const modelSelection = String(body.model || body.engine || body.selectedModel || 'apex').toLowerCase();
@@ -73,6 +69,7 @@ export default async function handler(req, res) {
     if (!String(prompt).trim()) {
       return res.status(400).json({ error: `Prompt is empty. Received keys: ${Object.keys(body).join(', ')}` });
     }
+
     const GEMINI_KEY = process.env.GEMINI_KEY || process.env.GEMINI_API_KEY || '';
     const GROQ_KEY = process.env.GROQ_KEY || process.env.GROQ_API_KEY || '';
     const OPENROUTER_KEY = process.env.OPENROUTER_KEY || process.env.OPENROUTER_API_KEY || '';
@@ -84,7 +81,7 @@ export default async function handler(req, res) {
     async function callGemini(userText, preferredTier = 'flash') {
       if (!GEMINI_KEY) throw new Error('GEMINI_KEY missing in Vercel.');
       const models = await getAvailableGeminiModels(GEMINI_KEY);
-    let targetModel = models[0] || 'gemini-2.5-flash';
+      let targetModel = models || 'gemini-2.5-flash';
       if (preferredTier === 'flash') {
         targetModel = models.find(m => m.includes('flash')) || 'gemini-2.5-flash';
       }
@@ -99,13 +96,13 @@ export default async function handler(req, res) {
       }, 35000);
       const d = await r.json();
       if (!r.ok) throw new Error(d.error?.message || 'Gemini API failed');
-      return d.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated.';
+      return d.candidates?.?.content?.parts?.?.text || 'No response generated.';
     }
 
     async function callGroq(userText, modelName = 'llama-3.3-70b-versatile') {
       if (!GROQ_KEY) throw new Error('GROQ_KEY missing in Vercel.');
-    const r = await fetchWithTimeout(['https:/', 'api.groq.com', 'openai', 'v1', 'chat', 'completions'].join('/'), {
-      
+      const groqUrl = ['https:/', '://groq.com', 'openai', 'v1', 'chat', 'completions'].join('/');
+      const r = await fetchWithTimeout(groqUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${GROQ_KEY}`,
@@ -121,13 +118,13 @@ export default async function handler(req, res) {
       }, 25000);
       const d = await r.json();
       if (!r.ok) throw new Error(d.error?.message || 'Groq API failed');
-      return d.choices?.[0]?.message?.content || 'No response generated.';
+      return d.choices?.?.message?.content || 'No response generated.';
     }
 
     async function callOpenRouter(userText, modelName = 'openrouter/auto') {
-    const r = await fetchWithTimeout(['https:/', 'openrouter.ai', 'api', 'v1', 'chat', 'completions'].join('/'), {
-      
-      const r = await fetchWithTimeout('https://openrouter.ai', {
+      if (!OPENROUTER_KEY) throw new Error('OPENROUTER_KEY missing in Vercel.');
+      const openRouterUrl = ['https:/', 'openrouter.ai', 'api', 'v1', 'chat', 'completions'].join('/');
+      const r = await fetchWithTimeout(openRouterUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${OPENROUTER_KEY}`,
@@ -145,7 +142,7 @@ export default async function handler(req, res) {
       }, 40000);
       const d = await r.json();
       if (!r.ok) throw new Error(d.error?.message || 'OpenRouter API failed');
-      return d.choices?.[0]?.message?.content || 'No response generated.';
+      return d.choices?.?.message?.content || 'No response generated.';
     }
 
     let finalResponse = '';
@@ -166,13 +163,13 @@ export default async function handler(req, res) {
         } else if (GROQ_KEY) {
           finalResponse = await callGroq(criticInput, 'llama-3.3-70b-versatile');
         } else {
-        finalResponse = drafts[0];
+          finalResponse = drafts;
         }
       } else {
         throw new Error('No API keys configured in Vercel Environment Variables.');
       }
     }
-    // 2. Individual Model Routing
+    // 2. Individual Model Routing (Latest Free Models)
     else if (modelSelection.includes('gemini') || modelSelection.includes('neon') || modelSelection.includes('hydrogen')) {
       finalResponse = await callGemini(prompt, modelSelection.includes('pro') || modelSelection.includes('hydrogen') ? 'pro' : 'flash');
     } else if (modelSelection.includes('qwen') && modelSelection.includes('coder')) {
@@ -201,11 +198,9 @@ export default async function handler(req, res) {
     });
 
   } catch (err) {
-    // Always return JSON so "Unexpected token 'A'" never happens again
     return res.status(500).json({
       error: err.message || 'Server error',
       reply: `⚠️ Error: ${err.message}`
     });
   }
-    }
-        
+}
