@@ -1103,69 +1103,125 @@ async function executeSatyexaDeploy() {
   
   
 <!-- SATYEXA-STUDIO-START -->
-<!-- Restore Satyexa Pro Workspace Sidebar & AI Instruction Box -->
+<!-- Satyexa All-in-One UI, Sidebar Actions & AI Smart-Patch Fix -->
 <style>
+  /* Fix bottom floating buttons overlapping input box and footer */
+  body {
+    padding-bottom: 105px !important;
+  }
   footer, div[style*="Architecture"], .app-container, main {
-    margin-bottom: 85px !important;
+    margin-bottom: 90px !important;
     padding-bottom: 30px !important;
   }
   @media (max-width: 640px) {
-    #satyexa-deploy-fab, button[onclick*="Deploy"], button[onclick*="Quick"] {
+    #satyexa-deploy-fab, #satyexa-quick-fab, button[onclick*="Deploy"], button[onclick*="Quick"] {
       bottom: 10px !important;
       padding: 7px 12px !important;
       font-size: 11px !important;
+      z-index: 998 !important;
+    }
+    .split-container, [class*="split"] {
+      flex-direction: column !important;
     }
   }
 </style>
 
 <script>
 (function() {
-  function restoreWorkspaceAndPatcher() {
-    // 1. Restore SATYEXA PRO WORKSPACE buttons in Sidebar if missing
-    const exportBtn = Array.from(document.querySelectorAll('button, div')).find(el => 
-      (el.innerText || '').includes('Export Chat (.txt)') && el.tagName === 'BUTTON'
+  // Helper to close sidebar and trigger specific tool/modal cleanly
+  window._openSatyexaTool = function(type) {
+    // 1. Close sidebar if open
+    const closeSidebarBtn = Array.from(document.querySelectorAll('button, div, span')).find(el => 
+      (el.innerText || '').trim() === '✕' || (el.innerText || '').trim() === '×'
     );
-    if (exportBtn && !document.getElementById('satyexa-restored-workspace')) {
-      const wsDiv = document.createElement('div');
-      wsDiv.id = 'satyexa-restored-workspace';
-      wsDiv.style.cssText = 'margin: 14px 0; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1);';
-      wsDiv.innerHTML = `
-        <div style="font-size:11px; font-weight:700; color:#facc15; letter-spacing:0.5px; margin-bottom:8px;">⚡ SATYEXA PRO WORKSPACE</div>
-        <button onclick="document.querySelector('button[onclick*=\\'Quick\\'], #satyexa-quick-fab')?.click()" style="width:100%; text-align:left; padding:10px 12px; margin-bottom:8px; border-radius:8px; border:none; background:linear-gradient(90deg,#0d9488,#059669); color:#fff; font-weight:600; font-size:13px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-          <span>📈 AI Market & Auto-Trader</span><span style="font-size:10px; background:rgba(0,0,0,0.25); padding:2px 6px; border-radius:4px;">LIVE</span>
-        </button>
-        <button onclick="document.querySelector('button[onclick*=\\'Deploy\\'], #satyexa-deploy-fab')?.click()" style="width:100%; text-align:left; padding:10px 12px; margin-bottom:8px; border-radius:8px; border:none; background:linear-gradient(90deg,#0284c7,#0d9488); color:#fff; font-weight:600; font-size:13px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-          <span>🚀 Universal Deploy Studio</span><span style="font-size:10px; background:rgba(0,0,0,0.25); padding:2px 6px; border-radius:4px;">API</span>
-        </button>
-        <button onclick="document.querySelector('button[onclick*=\\'Quick\\'], #satyexa-quick-fab')?.click()" style="width:100%; text-align:left; padding:10px 12px; margin-bottom:8px; border-radius:8px; border:none; background:linear-gradient(90deg,#0284c7,#2563eb); color:#fff; font-weight:600; font-size:13px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-          <span>🛠️ Quick Calc & Notes</span><span style="font-size:10px; background:rgba(0,0,0,0.25); padding:2px 6px; border-radius:4px;">TOOL</span>
-        </button>
-      `;
-      exportBtn.parentNode.insertBefore(wsDiv, exportBtn.nextSibling);
+    if (closeSidebarBtn) closeSidebarBtn.click();
+
+    setTimeout(() => {
+      if (type === 'deploy') {
+        const depBtn = document.querySelector('#satyexa-deploy-fab, button[onclick*="Deploy"]') || 
+          Array.from(document.querySelectorAll('button')).find(b => (b.innerText || '').includes('Deploy Studio'));
+        if (depBtn) depBtn.click();
+      } else if (type === 'calc') {
+        const quickBtn = document.querySelector('#satyexa-quick-fab, button[onclick*="Quick"]') || 
+          Array.from(document.querySelectorAll('button')).find(b => (b.innerText || '').includes('Quick Tools'));
+        if (quickBtn) quickBtn.click();
+      } else if (type === 'market') {
+        // Look for AI Market button/tab or trigger Quick Tools + Market view
+        const marketEl = Array.from(document.querySelectorAll('button, div, a')).find(el => 
+          el.id !== 'satyexa-ws-market' && (el.innerText || '').includes('Market') && !el.closest('#satyexa-restored-workspace')
+        );
+        if (marketEl) {
+          marketEl.click();
+        } else {
+          // Fallback: Open Quick Tools or focus chat with live market prompt
+          const quickBtn = document.querySelector('#satyexa-quick-fab, button[onclick*="Quick"]') || 
+            Array.from(document.querySelectorAll('button')).find(b => (b.innerText || '').includes('Quick Tools'));
+          if (quickBtn) quickBtn.click();
+        }
+      }
+    }, 150);
+  };
+
+  function runSatyexaMasterFix() {
+    // 1. Fix/Restore Sidebar SATYEXA PRO WORKSPACE buttons with working click actions
+    const allEls = Array.from(document.querySelectorAll('button, div, a'));
+    const exportEl = allEls.find(el => 
+      el.children.length <= 2 && (el.innerText || '').trim().includes('Export Chat')
+    );
+
+    if (exportEl) {
+      let wsDiv = document.getElementById('satyexa-restored-workspace');
+      if (!wsDiv) {
+        wsDiv = document.createElement('div');
+        wsDiv.id = 'satyexa-restored-workspace';
+        wsDiv.style.cssText = 'margin: 12px 0; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.12);';
+        exportEl.parentNode.insertBefore(wsDiv, exportEl.nextSibling);
+      }
+      if (!wsDiv.dataset.bound) {
+        wsDiv.dataset.bound = 'true';
+        wsDiv.innerHTML = `
+          <div style="font-size:11px; font-weight:700; color:#facc15; letter-spacing:0.5px; margin-bottom:8px;">⚡ SATYEXA PRO WORKSPACE</div>
+          <div id="satyexa-ws-market" onclick="window._openSatyexaTool('market')" style="padding:10px 12px; margin-bottom:8px; border-radius:8px; background:linear-gradient(90deg,#0d9488,#059669); color:#fff; font-weight:600; font-size:13px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+            <span>📈 AI Market & Auto-Trader</span><span style="font-size:10px; background:rgba(0,0,0,0.25); padding:2px 6px; border-radius:4px;">LIVE</span>
+          </div>
+          <div id="satyexa-ws-deploy" onclick="window._openSatyexaTool('deploy')" style="padding:10px 12px; margin-bottom:8px; border-radius:8px; background:linear-gradient(90deg,#0284c7,#0d9488); color:#fff; font-weight:600; font-size:13px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+            <span>🚀 Universal Deploy Studio</span><span style="font-size:10px; background:rgba(0,0,0,0.25); padding:2px 6px; border-radius:4px;">API</span>
+          </div>
+          <div id="satyexa-ws-calc" onclick="window._openSatyexaTool('calc')" style="padding:10px 12px; margin-bottom:8px; border-radius:8px; background:linear-gradient(90deg,#0284c7,#2563eb); color:#fff; font-weight:600; font-size:13px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+            <span>🛠️ Quick Calc & Notes</span><span style="font-size:10px; background:rgba(0,0,0,0.25); padding:2px 6px; border-radius:4px;">TOOL</span>
+          </div>
+        `;
+      }
     }
 
-    // 2. Add AI Instruction Box in Deploy Studio
+    // 2. Fix Deploy Studio AI Instruction Box & Platform Value (Fixes "Invalid platform selected")
     const codeBox = Array.from(document.querySelectorAll('textarea')).find(t => 
       (t.placeholder || '').toLowerCase().includes('generated code') || 
       (t.placeholder || '').toLowerCase().includes('paste manually')
     );
-    if (codeBox && !document.getElementById('satyexa-ai-instruction')) {
+    if (codeBox) {
       const selects = Array.from(document.querySelectorAll('select'));
-      const actionSelect = selects.find(s => Array.from(s.options).some(o => o.value === 'smart_inject' || o.text.includes('Smart Auto-Inject')));
-      if (actionSelect && !Array.from(actionSelect.options).some(o => o.value === 'ai_edit')) {
-        const opt = document.createElement('option');
-        opt.value = 'ai_edit';
-        opt.text = '🧠 GitHub AI Smart-Patch (Edit via Instruction)';
-        actionSelect.insertBefore(opt, actionSelect.firstChild);
-        actionSelect.value = 'ai_edit';
+      const actionSelect = selects.find(s => Array.from(s.options).some(o => o.text.includes('Smart Auto-Inject')));
+      
+      if (actionSelect) {
+        let aiOpt = Array.from(actionSelect.options).find(o => o.text.includes('Smart-Patch'));
+        if (!aiOpt) {
+          aiOpt = document.createElement('option');
+          aiOpt.text = '🧠 GitHub AI Smart-Patch (Edit via Instruction)';
+          actionSelect.insertBefore(aiOpt, actionSelect.firstChild);
+        }
+        const sampleVal = Array.from(actionSelect.options).find(o => o.value.includes('smart_inject'))?.value || 'smart_inject';
+        aiOpt.value = sampleVal.includes(':') ? 'github:ai_edit' : 'ai_edit';
       }
 
-      const instBox = document.createElement('textarea');
-      instBox.id = 'satyexa-ai-instruction';
-      instBox.rows = 3;
-      instBox.placeholder = '🧠 AI Instruction (বাংলা বা English-এ লিখুন কী বদলাতে হবে)...';
-      instBox.style.cssText = 'width:100%; margin-bottom:10px; padding:10px; border-radius:8px; background:#0f172a; color:#38bdf8; border:1px solid #38bdf8; font-size:13px; outline:none; box-sizing:border-box;';
-      codeBox.parentNode.insertBefore(instBox, codeBox);
+      if (!document.getElementById('satyexa-ai-instruction')) {
+        const instBox = document.createElement('textarea');
+        instBox.id = 'satyexa-ai-instruction';
+        instBox.rows = 3;
+        instBox.placeholder = '🧠 AI Instruction (বাংলা বা English-এ লিখুন কী বদলাতে হবে)...';
+        instBox.style.cssText = 'width:100%; margin-bottom:10px; padding:10px; border-radius:8px; background:#0f172a; color:#38bdf8; border:1px solid #38bdf8; font-size:13px; outline:none; box-sizing:border-box;';
+        codeBox.parentNode.insertBefore(instBox, codeBox);
+      }
 
       if (!window._satyexaFetchHooked) {
         window._satyexaFetchHooked = true;
@@ -1175,9 +1231,11 @@ async function executeSatyexaDeploy() {
             try {
               const payload = JSON.parse(options.body);
               const instEl = document.getElementById('satyexa-ai-instruction');
-              if (payload.fileData && instEl && instEl.value.trim()) {
+              if (instEl && instEl.value.trim()) {
+                payload.platform = 'github';
+                payload.action = 'ai_edit';
+                payload.fileData = payload.fileData || {};
                 payload.fileData.instruction = instEl.value.trim();
-                if (actionSelect && actionSelect.value === 'ai_edit') payload.action = 'ai_edit';
                 options.body = JSON.stringify(payload);
               }
             } catch (e) {}
@@ -1187,7 +1245,7 @@ async function executeSatyexaDeploy() {
       }
     }
   }
-  setInterval(restoreWorkspaceAndPatcher, 700);
+  setInterval(runSatyexaMasterFix, 500);
 })();
 </script>
 
