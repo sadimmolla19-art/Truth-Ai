@@ -831,5 +831,24 @@ async function executeSatyexaDeploy() {
   } catch (e) { status.style.color = '#f87171'; status.innerText = '❌ Network Error: ' + e.message; }
   
 </script>
+  <script>
+setInterval(function() {
+  var list = document.getElementById('sessionList');
+  if (list && !document.getElementById('satyexa-restored-workspace')) {
+    var ws = document.createElement('div');
+    ws.id = 'satyexa-restored-workspace';
+    ws.style.cssText = 'margin:10px 0;padding-top:10px;border-top:1px solid #1e293b;';
+    ws.innerHTML =
+      '<div style="font-size:11px;font-weight:bold;color:#facc15;margin-bottom:8px;">⚡ SATYEXA PRO WORKSPACE</div>' +
+      '<div onclick="toggleSidebar();if(document.getElementById(\'satyexa-trader-modal\'))document.getElementById(\'satyexa-trader-modal\').style.display=\'block\';else document.getElementById(\'satyexa-share-modal\').style.display=\'block\';" style="padding:9px 11px;margin-bottom:6px;border-radius:8px;background:linear-gradient(90deg,#0d9488,#059669);color:#fff;font-size:12.5px;font-weight:bold;cursor:pointer;display:flex;justify-content:space-between;"><span>📈 AI Market & Auto-Trader</span><span style="font-size:10px;background:rgba(0,0,0,0.3);padding:2px 6px;border-radius:4px;">LIVE</span></div>' +
+      '<div onclick="toggleSidebar();document.getElementById(\'satyexa-share-modal\').style.display=\'block\'" style="padding:9px 11px;margin-bottom:6px;border-radius:8px;background:linear-gradient(90deg,#7c3aed,#db2777);color:#fff;font-size:12.5px;font-weight:bold;cursor:pointer;display:flex;justify-content:space-between;"><span>📊 Share Bazar & Price Trend</span><span style="font-size:10px;background:rgba(0,0,0,0.3);padding:2px 6px;border-radius:4px;">DSE/AI</span></div>' +
+      '<div onclick="toggleSidebar();toggleDeployModal()" style="padding:9px 11px;margin-bottom:6px;border-radius:8px;background:linear-gradient(90deg,#0284c7,#0d9488);color:#fff;font-size:12.5px;font-weight:bold;cursor:pointer;display:flex;justify-content:space-between;"><span>🚀 Universal Deploy Studio</span><span style="font-size:10px;background:rgba(0,0,0,0.3);padding:2px 6px;border-radius:4px;">API</span></div>' +
+      '<div onclick="toggleSidebar();document.getElementById(\'satyexa-tools-box\').style.display=\'block\'" style="padding:9px 11px;margin-bottom:6px;border-radius:8px;background:linear-gradient(90deg,#0284c7,#2563eb);color:#fff;font-size:12.5px;font-weight:bold;cursor:pointer;display:flex;justify-content:space-between;"><span>🛠️ Quick Calc & Notes</span><span style="font-size:10px;background:rgba(0,0,0,0.3);padding:2px 6px;border-radius:4px;">TOOL</span></div>' +
+      '<div onclick="toggleSidebar();document.getElementById(\'sandboxFrame\').srcdoc=\'<!DOCTYPE html><html><body style=margin:0;background:#030712;color:#10b981;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:sans-serif><h2>🐍 Cyber Snake</h2><canvas id=g width=280 height=280 style=border:2px solid #38bdf8;background:#0f172a></canvas><script>const c=document.getElementById(\\\'g\\\'),x=c.getContext(\\\'2d\\\');let s=[{x:140,y:140}],dx=14,dy=0,f={x:70,y:70};document.onkeydown=e=>{if(e.key===\\\'ArrowUp\\\'&&dy===0){dx=0;dy=-14}if(e.key===\\\'ArrowDown\\\'&&dy===0){dx=0;dy=14}if(e.key===\\\'ArrowLeft\\\'&&dx===0){dx=-14;dy=0}if(e.key===\\\'ArrowRight\\\'&&dx===0){dx=14;dy=0}};setInterval(()=>{const h={x:(s.x+dx+280)%280,y:(s.y+dy+280)%280};s.unshift(h);if(h.x===f.x&&h.y===f.y)f={x:Math.floor(Math.random()*20)*14,y:Math.floor(Math.random()*20)*14};else s.pop();x.clearRect(0,0,280,280);x.fillStyle=\\\'#f43f5e\\\';x.fillRect(f.x,f.y,13,13);x.fillStyle=\\\'#10b981\\\';s.forEach(p=>x.fillRect(p.x,p.y,13,13))},120)<\\/script></body></html>\';document.getElementById(\'sandboxModal\').classList.remove(\'hidden\')" style="padding:9px 11px;margin-bottom:6px;border-radius:8px;background:linear-gradient(90deg,#d97706,#ea580c);color:#fff;font-size:12.5px;font-weight:bold;cursor:pointer;display:flex;justify-content:space-between;"><span>🎮 Play Cyber Snake Game</span><span style="font-size:10px;background:rgba(0,0,0,0.3);padding:2px 6px;border-radius:4px;">FUN</span></div>';
+    list.parentNode.insertBefore(ws, list);
+  }
+}, 500);
+  </script>
+  
 </body>
 </html>
