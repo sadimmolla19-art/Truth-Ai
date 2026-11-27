@@ -3,7 +3,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const { url, email, password } = req.body || {};
+  const { url, email, password, fullName } = req.body || {};
   const apiKey = process.env.BROWSERLESS_API_KEY;
 
   if (!url || !email || !password) {
@@ -14,39 +14,61 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'BROWSERLESS_API_KEY is missing in Vercel Environment Variables.' });
   }
 
+  const emailPrefix = email.split('@')[0] || 'user';
+  const nameToUse = fullName || emailPrefix.replace(/[^a-zA-Z ]/g, ' ').trim() || 'Sadim User';
+  const usernameToUse = emailPrefix.replace(/[^a-zA-Z0-9]/g, '') + Math.floor(10 + Math.random() * 89);
+
   try {
-    // Puppeteer/Playwright script sent to Browserless Cloud API
     const script = `
       module.exports = async ({ page }) => {
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
         await page.goto(${JSON.stringify(url)}, { waitUntil: 'networkidle2', timeout: 30000 });
-        
-        // Auto-detect and fill standard email, username, and password fields
-        const emailSelectors = ['input[type="email"]', 'input[name*="email"]', 'input[name*="user"]', 'input[id*="email"]'];
-        for (const sel of emailSelectors) {
-          if (await page.$(sel)) { await page.type(sel, ${JSON.stringify(email)}, { delay: 30 }); break; }
-        }
 
-        const passSelectors = ['input[type="password"]', 'input[name*="pass"]', 'input[id*="pass"]'];
-        for (const sel of passSelectors) {
-          if (await page.$(sel)) { await page.type(sel, ${JSON.stringify(password)}, { delay: 30 }); break; }
-        }
+        await page.evaluate(({ email, password, nameToUse, usernameToUse }) => {
+          const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"]):not([disabled])'));
+          inputs.forEach(inp => {
+            const attr = (inp.type + ' ' + inp.name + ' ' + inp.id + ' ' + inp.placeholder).toLowerCase();
+            if (inp.type === 'checkbox') {
+              inp.checked = true;
+              inp.dispatchEvent(new Event('change', { bubbles: true }));
+            } else if (attr.includes('email')) {
+              inp.value = email;
+            } else if (attr.includes('pass')) {
+              inp.value = password;
+            } else if (attr.includes('user')) {
+              inp.value = usernameToUse;
+            } else if (attr.includes('first')) {
+              inp.value = nameToUse.split(' ')[0] || 'Sadim';
+            } else if (attr.includes('last')) {
+              inp.value = nameToUse.split(' ')[1] || 'User';
+            } else if (attr.includes('name')) {
+              inp.value = nameToUse;
+            } else if (attr.includes('phone') || attr.includes('mobile')) {
+              inp.value = '01700000000';
+            }
+            inp.dispatchEvent(new Event('input', { bubbles: true }));
+            inp.dispatchEvent(new Event('change', { bubbles: true }));
+          });
+        }, { email: ${JSON.stringify(email)}, password: ${JSON.stringify(password)}, nameToUse: ${JSON.stringify(nameToUse)}, usernameToUse: ${JSON.stringify(usernameToUse)} });
 
-        // Click submit button if present
-        const submitBtn = await page.$('button[type="submit"], input[type="submit"]');
-        if (submitBtn) {
-          await Promise.all([
-            submitBtn.click(),
-            page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 10000 }).catch(() => {})
-          ]);
+        const clicked = await page.evaluate(() => {
+          const btns = Array.from(document.querySelectorAll('button, input[type="submit"]'));
+          const target = btns.find(b => /sign up|register|create|submit|next|continue/i.test(b.innerText || b.value || ''));
+          if (target) { target.click(); return true; }
+          return false;
+        });
+
+        if (clicked) {
+          await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 10000 }).catch(() => {});
         }
 
         const finalTitle = await page.title();
         const finalUrl = page.url();
-        return { data: { title: finalTitle, finalUrl }, type: 'application/json' };
+        return { data: { title: finalTitle, finalUrl, username: usernameToUse }, type: 'application/json' };
       };
     `;
 
-    const response = await fetch(`https://browserless.io{apiKey}`, {
+    const response = await fetch('https://browserless.io' + apiKey, {
       method: 'POST',
       headers: { 'Content-Type': 'application/javascript' },
       body: script
@@ -59,7 +81,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       success: true,
-      message: `Page loaded (${result.data?.title || 'Done'}) -> Redirected to: ${result.data?.finalUrl || url}`
+      message: `Completed! Username: ${result.data?.username} | Page: ${result.data?.title || 'Done'} | URL: ${result.data?.finalUrl || url}`
     });
   } catch (err) {
     return res.status(500).json({ error: err.message || 'Headless API Error' });
