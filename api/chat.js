@@ -1,4 +1,5 @@
-const GEMINI_ROOT = 'https://generativelanguage.' + '://googleapis.com';
+const GEMINI_ROOT = 'https://generativelanguage.' + 'googleapis.' + 'com/v1beta/models';
+
 const GROQ_URL = 'https://api.groq.' + 'com/openai/v1/chat/completions';
 const OPENROUTER_URL = 'https://openrouter.' + 'ai/api/v1/chat/completions';
 
