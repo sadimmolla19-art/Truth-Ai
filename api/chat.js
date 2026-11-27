@@ -97,10 +97,11 @@ export default async function handler(req, res) {
       const emailMatch = userPrompt.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
       const passMatch = userPrompt.match(/pass(?:word)?[:=\s]+([^\s]+)/i);
 
-      const safeEmail = emailMatch ? emailMatch : `sadim.auto${Math.floor(100 + Math.random() * 899)}@gmail.com`;
-      const safePass = passMatch ? passMatch : 'Satyexa#2026!';
-      const usernameToUse = safeEmail.split('@').replace(/[^a-zA-Z0-9]/g, '') + Math.floor(10 + Math.random() * 89);
-
+            const safeEmail = emailMatch ? emailMatch : (body.vaultEmail || `sadim.auto${Math.floor(100 + Math.random() * 899)}@gmail.com`);
+      const safePass = passMatch ? passMatch : (body.vaultPass || 'Satyexa#2026!');
+      const safeFullName = body.vaultName || 'Sadim Molla';
+      const usernameToUse = safeEmail.split('@')[0].replace(/[^a-zA-Z0-9]/g, '') + Math.floor(10 + Math.random() * 89);
+      
       try {
         const endpoint = 'https://chrome.browserless.' + 'io/function?token=' + browserlessKey;
         const script = `
