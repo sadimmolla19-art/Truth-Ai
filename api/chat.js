@@ -1,4 +1,4 @@
-const GEMINI_ROOT = ['https:/', '://googleapis.com', 'v1beta', 'models'].join('/');
+const GEMINI_ROOT = 'https://googleapis.com';
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 25000) {
   const controller = new AbortController();
@@ -51,15 +51,15 @@ export default async function handler(req, res) {
 
     let prompt = body.prompt || body.message || body.query || body.text || body.input || body.content || body.userPrompt || '';
     if (!prompt && Array.isArray(body.messages) && body.messages.length > 0) {
-      const lastMsg = body.messages[body.messages.length - 1];
+      const lastMsg = body.messages.at(-1);
       prompt = typeof lastMsg === 'string' ? lastMsg : (lastMsg?.content || lastMsg?.text || '');
     }
     if (!prompt && Array.isArray(body.contents) && body.contents.length > 0) {
-      prompt = body.contents[body.contents.length - 1]?.parts?.?.text || '';
+      prompt = body.contents.at(-1)?.parts?.at(0)?.text || '';
     }
     if (!prompt) {
       const stringVals = Object.values(body).filter(v => typeof v === 'string' && v.trim().length > 0);
-      if (stringVals.length > 0) prompt = stringVals.sort((a, b) => b.length - a.length);
+      if (stringVals.length > 0) prompt = stringVals.sort((a, b) => b.length - a.length).at(0);
     }
 
     const modelSelection = String(body.model || body.engine || body.selectedModel || 'apex').toLowerCase();
@@ -67,7 +67,7 @@ export default async function handler(req, res) {
     const webMode = Boolean(body.web || body.webMode || body.search);
 
     if (!String(prompt).trim()) {
-      return res.status(400).json({ error: `Prompt is empty. Received keys: ${Object.keys(body).join(', ')}` });
+      return res.status(400).json({ error: 'Prompt is empty.' });
     }
 
     const GEMINI_KEY = process.env.GEMINI_KEY || process.env.GEMINI_API_KEY || '';
@@ -81,7 +81,7 @@ export default async function handler(req, res) {
     async function callGemini(userText, preferredTier = 'flash') {
       if (!GEMINI_KEY) throw new Error('GEMINI_KEY missing in Vercel.');
       const models = await getAvailableGeminiModels(GEMINI_KEY);
-      let targetModel = models || 'gemini-2.5-flash';
+      let targetModel = models.at(0) || 'gemini-2.5-flash';
       if (preferredTier === 'flash') {
         targetModel = models.find(m => m.includes('flash')) || 'gemini-2.5-flash';
       }
@@ -96,12 +96,12 @@ export default async function handler(req, res) {
       }, 35000);
       const d = await r.json();
       if (!r.ok) throw new Error(d.error?.message || 'Gemini API failed');
-      return d.candidates?.?.content?.parts?.?.text || 'No response generated.';
+      return d.candidates?.at(0)?.content?.parts?.at(0)?.text || 'No response generated.';
     }
 
     async function callGroq(userText, modelName = 'llama-3.3-70b-versatile') {
       if (!GROQ_KEY) throw new Error('GROQ_KEY missing in Vercel.');
-      const groqUrl = ['https:/', '://groq.com', 'openai', 'v1', 'chat', 'completions'].join('/');
+      const groqUrl = 'https://groq.com';
       const r = await fetchWithTimeout(groqUrl, {
         method: 'POST',
         headers: {
@@ -118,12 +118,12 @@ export default async function handler(req, res) {
       }, 25000);
       const d = await r.json();
       if (!r.ok) throw new Error(d.error?.message || 'Groq API failed');
-      return d.choices?.?.message?.content || 'No response generated.';
+      return d.choices?.at(0)?.message?.content || 'No response generated.';
     }
 
     async function callOpenRouter(userText, modelName = 'openrouter/auto') {
       if (!OPENROUTER_KEY) throw new Error('OPENROUTER_KEY missing in Vercel.');
-      const openRouterUrl = ['https:/', 'openrouter.ai', 'api', 'v1', 'chat', 'completions'].join('/');
+      const openRouterUrl = 'https://openrouter.ai';
       const r = await fetchWithTimeout(openRouterUrl, {
         method: 'POST',
         headers: {
@@ -142,12 +142,11 @@ export default async function handler(req, res) {
       }, 40000);
       const d = await r.json();
       if (!r.ok) throw new Error(d.error?.message || 'OpenRouter API failed');
-      return d.choices?.?.message?.content || 'No response generated.';
+      return d.choices?.at(0)?.message?.content || 'No response generated.';
     }
 
     let finalResponse = '';
 
-    // 1. APEX GOD-MODE (Parallel Multi-Brain + Critic)
     if (modelSelection.includes('apex') || modelSelection.includes('god')) {
       const tasks = [];
       if (GROQ_KEY) tasks.push(callGroq(prompt, 'llama-3.3-70b-versatile').catch(e => `[Groq Fallback]: ${e.message}`));
@@ -163,13 +162,12 @@ export default async function handler(req, res) {
         } else if (GROQ_KEY) {
           finalResponse = await callGroq(criticInput, 'llama-3.3-70b-versatile');
         } else {
-          finalResponse = drafts;
+          finalResponse = drafts.at(0);
         }
       } else {
         throw new Error('No API keys configured in Vercel Environment Variables.');
       }
     }
-    // 2. Individual Model Routing (Latest Free Models)
     else if (modelSelection.includes('gemini') || modelSelection.includes('neon') || modelSelection.includes('hydrogen')) {
       finalResponse = await callGemini(prompt, modelSelection.includes('pro') || modelSelection.includes('hydrogen') ? 'pro' : 'flash');
     } else if (modelSelection.includes('qwen') && modelSelection.includes('coder')) {
@@ -203,4 +201,4 @@ export default async function handler(req, res) {
       reply: `⚠️ Error: ${err.message}`
     });
   }
-}
+               }
