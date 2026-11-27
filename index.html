@@ -1103,26 +1103,81 @@ async function executeSatyexaDeploy() {
   
   
 <!-- SATYEXA-STUDIO-START -->
+<!-- Satyexa AI Instruction Patcher & Mobile UI Fix -->
 <style>
-  /* Push footer and main wrapper up so floating buttons never overlap text */
-  footer, 
-  div[style*="Architecture"], 
-  .app-container, 
-  main {
+  footer, div[style*="Architecture"], .app-container, main {
     margin-bottom: 85px !important;
     padding-bottom: 30px !important;
   }
-
   @media (max-width: 640px) {
-    #satyexa-deploy-fab,
-    button[onclick*="Deploy"],
-    button[onclick*="Quick"] {
+    #satyexa-deploy-fab, button[onclick*="Deploy"], button[onclick*="Quick"] {
       bottom: 10px !important;
       padding: 7px 12px !important;
       font-size: 11px !important;
     }
+    .split-container, [class*="split"] {
+      flex-direction: column !important;
+    }
   }
 </style>
+
+<script>
+(function() {
+  function initSatyexaPatcher() {
+    // Find the Deploy Studio code textarea
+    const codeBox = Array.from(document.querySelectorAll('textarea')).find(t => 
+      (t.placeholder || '').toLowerCase().includes('generated code') || 
+      (t.placeholder || '').toLowerCase().includes('paste manually')
+    );
+    if (!codeBox || document.getElementById('satyexa-ai-instruction')) return;
+
+    // 1. Add "AI Smart-Patch" option to the Platform/Action dropdown
+    const selects = Array.from(document.querySelectorAll('select'));
+    const actionSelect = selects.find(s => Array.from(s.options).some(o => o.value === 'smart_inject' || o.text.includes('Smart Auto-Inject')));
+    if (actionSelect && !Array.from(actionSelect.options).some(o => o.value === 'ai_edit')) {
+      const opt = document.createElement('option');
+      opt.value = 'ai_edit';
+      opt.text = '🧠 GitHub AI Smart-Patch (Edit via Instruction)';
+      actionSelect.insertBefore(opt, actionSelect.firstChild);
+      actionSelect.value = 'ai_edit';
+    }
+
+    // 2. Create and insert the AI Instruction Box right above the code box
+    const instBox = document.createElement('textarea');
+    instBox.id = 'satyexa-ai-instruction';
+    instBox.rows = 3;
+    instBox.placeholder = '🧠 AI Instruction (বাংলা বা English-এ লিখুন কী বদলাতে হবে, যেমন: পুরনো ফিচার না কেটে শুধু ফাংশনটি আপডেট করো)...';
+    instBox.style.cssText = 'width:100%; margin-bottom:10px; padding:10px; border-radius:8px; background:#0f172a; color:#38bdf8; border:1px solid #38bdf8; font-size:13px; outline:none; box-sizing:border-box;';
+    codeBox.parentNode.insertBefore(instBox, codeBox);
+
+    // 3. Intercept fetch requests to /api/deploy to include the instruction & ai_edit action
+    if (!window._satyexaFetchHooked) {
+      window._satyexaFetchHooked = true;
+      const origFetch = window.fetch;
+      window.fetch = async function(url, options) {
+        if (typeof url === 'string' && url.includes('deploy') && options && options.body) {
+          try {
+            const payload = JSON.parse(options.body);
+            const instEl = document.getElementById('satyexa-ai-instruction');
+            const selEl = actionSelect;
+            if (payload.fileData && instEl && instEl.value.trim()) {
+              payload.fileData.instruction = instEl.value.trim();
+              if (selEl && selEl.value === 'ai_edit') {
+                payload.action = 'ai_edit';
+              }
+              options.body = JSON.stringify(payload);
+            }
+          } catch (e) {}
+        }
+        return origFetch.apply(this, arguments);
+      };
+    }
+  }
+
+  // Run automatically when Deploy Studio modal opens
+  setInterval(initSatyexaPatcher, 800);
+})();
+</script>
 
 <!-- SATYEXA-STUDIO-END -->
 <div id="satyexa-trader-modal" style="display:none;position:fixed;inset:0;z-index:100005;background:rgba(0,0,0,0.9);backdrop-filter:blur(6px);padding:14px;overflow-y:auto;font-family:sans-serif;color:#fff;">
