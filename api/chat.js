@@ -1,4 +1,5 @@
-const GEMINI_ROOT = 'https://googleapis.com';
+const GEMINI_ROOT = ['https:/', 'generativelanguage.googleapis.com', 'v1beta', 'models'].join('/');
+
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 25000) {
   const controller = new AbortController();
@@ -103,7 +104,8 @@ export default async function handler(req, res) {
 
     async function callGroq(userText, modelName = 'llama-3.3-70b-versatile') {
       if (!GROQ_KEY) throw new Error('GROQ_KEY missing in Vercel.');
-      const r = await fetchWithTimeout('https://groq.com', {
+    const r = await fetchWithTimeout(['https:/', 'api.groq.com', 'openai', 'v1', 'chat', 'completions'].join('/'), {
+      
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${GROQ_KEY}`,
@@ -123,7 +125,8 @@ export default async function handler(req, res) {
     }
 
     async function callOpenRouter(userText, modelName = 'openrouter/auto') {
-      if (!OPENROUTER_KEY) throw new Error('OPENROUTER_KEY missing in Vercel.');
+    const r = await fetchWithTimeout(['https:/', 'openrouter.ai', 'api', 'v1', 'chat', 'completions'].join('/'), {
+      
       const r = await fetchWithTimeout('https://openrouter.ai', {
         method: 'POST',
         headers: {
