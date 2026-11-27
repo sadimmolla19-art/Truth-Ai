@@ -1,9 +1,8 @@
 const GEMINI_ROOT = 'https://generativelanguage.' + 'googleapis.' + 'com/v1beta/models';
-
 const GROQ_URL = 'https://api.groq.' + 'com/openai/v1/chat/completions';
 const OPENROUTER_URL = 'https://openrouter.' + 'ai/api/v1/chat/completions';
 
-async function fetchWithTimeout(url, options = {}, timeoutMs = 22000) {
+async function fetchWithTimeout(url, options = {}, timeoutMs = 25000) {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -66,18 +65,13 @@ export default async function handler(req, res) {
     if (!prompt && Array.isArray(body.contents) && body.contents.length > 0) {
       prompt = body.contents.at(-1)?.parts?.at(0)?.text || '';
     }
-    if (!prompt) {
-      const stringVals = Object.values(body).filter(v => typeof v === 'string' && v.trim().length > 0 && !v.startsWith('data:'));
-      if (stringVals.length > 0) prompt = stringVals.sort((a, b) => b.length - a.length).at(0);
-    }
 
-    const incomingImage = body.imageBase64 || body.image || body.imageData || body.fileData || body.attachment || (Array.isArray(body.images) ? body.images : '') || '';
+    const incomingImage = body.imageBase64 || body.image || body.imageData || body.fileData || body.attachment || (Array.isArray(body.images) ? body.images[0] : '') || '';
 
     if (!String(prompt).trim() && incomingImage) {
       prompt = 'Analyze this uploaded file (image, video, or PDF) in detail.';
     }
 
-    const thinkMode = Boolean(body.think || body.thinkMode || body.deepThink);
     const isMarketQuery = /price|live|btc|bitcoin|eth|stock|share|market|trade|trading|forex|gold|dse|nasdaq|today|news|current/i.test(prompt);
     const webMode = Boolean(body.web || body.webMode || body.webSearch || body.search || isMarketQuery);
 
@@ -91,30 +85,47 @@ export default async function handler(req, res) {
 
     const liveMarketFeed = isMarketQuery ? await getLiveCryptoSnapshot(prompt) : '';
     const isTruthMode = Boolean(body.truthMode || body.truth || String(body.model || '').toLowerCase().includes('truth'));
-          async function runHeadlessAgent(userPrompt) {
-      let urlMatch = userPrompt.match(/https?:\/\/[^\s"'<>]+/i);
+        async function runHeadlessAgent(userPrompt) {
       const browserlessKey = process.env.BROWSERLESS_API_KEY;
-      if (!browserlessKey) return null;
+      if (!browserlessKey) return { report: '\n[SYSTEM NOTE: BROWSERLESS_API_KEY is missing in Vercel Environment Variables.]\n', screenshot: null };
 
-      let targetUrl = urlMatch ? urlMatch : '';
+      let urlMatch = userPrompt.match(/https?:\/\/[^\s"'<>]+/i);
+      let domainMatch = userPrompt.match(/\b([a-zA-Z0-9-]+(?:\.[a-zA-Z]{2,})+)\b/i);
+      let targetUrl = urlMatch ? urlMatch[0] : '';
+
+      if (!targetUrl && domainMatch && !/gmail\.com|yahoo\.com|outlook\.com/i.test(domainMatch[0])) {
+        targetUrl = 'https://' + domainMatch[0];
+      }
+
       if (!targetUrl) {
         if (/facebook|fb/i.test(userPrompt)) targetUrl = 'https://www.facebook.' + 'com/r.php';
         else if (/microsoft|outlook|hotmail/i.test(userPrompt)) targetUrl = 'https://signup.live.' + 'com';
         else if (/github/i.test(userPrompt)) targetUrl = 'https://github.' + 'com/signup';
         else if (/reddit/i.test(userPrompt)) targetUrl = 'https://www.reddit.' + 'com/register';
         else if (/instagram/i.test(userPrompt)) targetUrl = 'https://www.instagram.' + 'com/accounts/emailsignup/';
+        else if (/twitter|x\.com/i.test(userPrompt)) targetUrl = 'https://x.' + 'com/i/flow/signup';
+        else if (/discord/i.test(userPrompt)) targetUrl = 'https://discord.' + 'com/register';
       }
-      if (!targetUrl) return null;
-          
+
+      const isBrowserIntent = Boolean(targetUrl) || /website|site|browse|visit|open|account|register|sign up|signup|fill|form|create|submit|login|khule|kule|screenshot|ss|scrape|read page/i.test(userPrompt);
+      if (!isBrowserIntent) return null;
+
+      if (!targetUrl) {
+        return {
+          report: `\n[HEADLESS CHROME AGENT READY]: Headless browser is active and ready. Ask the user which specific website name or URL (e.g., github.com, reddit.com, or any URL) they want you to open, create an account on, fill forms, or take a screenshot of.\n`,
+          screenshot: null
+        };
+      }
+
       const isFormAction = /account|register|sign up|signup|fill|form|create|submit|login|khule|kule/i.test(userPrompt);
       const emailMatch = userPrompt.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
       const passMatch = userPrompt.match(/pass(?:word)?[:=\s]+([^\s]+)/i);
 
-      const safeEmail = emailMatch ? emailMatch : (body.vaultEmail || `sadim.auto${Math.floor(100 + Math.random() * 899)}@gmail.com`);
-      const safePass = passMatch ? passMatch : (body.vaultPass || 'Satyexa#2026!');
+      const safeEmail = emailMatch ? emailMatch[0] : (body.vaultEmail || `sadim.auto${Math.floor(100 + Math.random() * 899)}@gmail.com`);
+      const safePass = passMatch ? passMatch[1] : (body.vaultPass || 'Satyexa#2026!');
       const safeFullName = body.vaultName || 'Sadim Molla';
-      const usernameToUse = safeEmail.split('@').replace(/[^a-zA-Z0-9]/g, '') + Math.floor(10 + Math.random() * 89);
-      
+      const usernameToUse = safeEmail.split('@')[0].replace(/[^a-zA-Z0-9]/g, '') + Math.floor(10 + Math.random() * 89);
+
       try {
         const endpoint = 'https://chrome.browserless.' + 'io/function?token=' + browserlessKey;
         const script = `
@@ -125,17 +136,28 @@ export default async function handler(req, res) {
 
             let formFilled = false;
             if (${JSON.stringify(isFormAction)}) {
+              const signupLink = await page.evaluate(() => {
+                const links = Array.from(document.querySelectorAll('a, button'));
+                const target = links.find(el => /sign up|register|create account|get started|join now/i.test(el.innerText || ''));
+                if (target && target.href && !target.href.startsWith('javascript')) return target.href;
+                return null;
+              });
+              if (signupLink && !/signup|register|r\.php/i.test(page.url())) {
+                await page.goto(signupLink, { waitUntil: 'networkidle2', timeout: 15000 }).catch(() => {});
+              }
+
               formFilled = await page.evaluate(({ email, password, usernameToUse, fullName }) => {
                 const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"]):not([disabled]), textarea'));
                 if (inputs.length === 0) return false;
+                const nameParts = fullName.split(' ');
                 inputs.forEach(inp => {
                   const attr = (inp.type + ' ' + inp.name + ' ' + inp.id + ' ' + inp.placeholder).toLowerCase();
                   if (inp.type === 'checkbox') { inp.checked = true; }
                   else if (attr.includes('email')) { inp.value = email; }
                   else if (attr.includes('pass')) { inp.value = password; }
                   else if (attr.includes('user')) { inp.value = usernameToUse; }
-                  else if (attr.includes('first')) { inp.value = fullName.split(' ') || 'Sadim'; }
-                  else if (attr.includes('last')) { inp.value = fullName.split(' ') || 'Molla'; }
+                  else if (attr.includes('first')) { inp.value = nameParts[0] || 'Sadim'; }
+                  else if (attr.includes('last')) { inp.value = nameParts[1] || 'Molla'; }
                   else if (attr.includes('name')) { inp.value = fullName; }
                   else if (attr.includes('phone') || attr.includes('mobile')) { inp.value = '01700000000'; }
                   inp.dispatchEvent(new Event('input', { bubbles: true }));
@@ -154,8 +176,8 @@ export default async function handler(req, res) {
 
             const title = await page.title();
             const finalUrl = page.url();
-            const content = await page.evaluate(() => document.body.innerText.slice(0, 2500));
-            const screenshot = await page.screenshot({ encoding: 'base64', type: 'jpeg', quality: 60 });
+            const content = await page.evaluate(() => document.body.innerText.slice(0, 3000));
+            const screenshot = await page.screenshot({ encoding: 'base64', type: 'jpeg', quality: 65 });
             return { data: { title, finalUrl, formFilled, username: usernameToUse, email: ${JSON.stringify(safeEmail)}, content, screenshot }, type: 'application/json' };
           };
         `;
@@ -166,18 +188,27 @@ export default async function handler(req, res) {
           body: script
         }, 28000);
 
-        if (!r.ok) return null;
+        if (!r.ok) return { report: `\n[HEADLESS AGENT ERROR]: Browserless returned status ${r.status}.\n`, screenshot: null };
         const json = await r.json();
-        return `\n[HEADLESS CHROME AGENT EXECUTION REPORT]:\nTarget URL: ${targetUrl}\nFinal URL: ${json.data?.finalUrl}\nPage Title: ${json.data?.title}\nForm Auto-Filled & Submitted: ${json.data?.formFilled}\nGenerated Credentials: Email=${json.data?.email}, Username=${json.data?.username}, Password=${safePass}\nExtracted Page Content:\n${json.data?.content}\n`;
-      } catch {
-        return null;
+        return {
+          report: `\n[HEADLESS CHROME AGENT EXECUTION REPORT]:\nTarget URL: ${targetUrl}\nFinal URL: ${json.data?.finalUrl}\nPage Title: ${json.data?.title}\nForm Auto-Filled & Submitted: ${json.data?.formFilled}\nGenerated Credentials: Email=${json.data?.email}, Username=${json.data?.username}, Password=${safePass}\nExtracted Page Content:\n${json.data?.content}\n`,
+          screenshot: json.data?.screenshot ? `data:image/jpeg;base64,${json.data.screenshot}` : null
+        };
+      } catch (e) {
+        return { report: `\n[HEADLESS AGENT ERROR]: ${e.message}\n`, screenshot: null };
       }
     }
 
-    const headlessReport = await runHeadlessAgent(prompt);
-    let systemPrompt = body.customPersona || "";
-        if (isTruthMode) {
-      systemPrompt = `You are TRUTH-AI, a bold, opinionated, analytical and conversational AI.
+    const headlessResult = await runHeadlessAgent(prompt);
+    const headlessReport = headlessResult ? headlessResult.report : '';
+        let systemPrompt = body.customPersona || `You are Satyexa AI (APEX-GOD-MODE), an advanced autonomous AI system with a built-in Headless Chrome Browser Agent, Vision/PDF/Video Multimodal Engine, and Live Market Feed.
+CRITICAL CAPABILITY RULES:
+- You CAN browse any website, auto-fill signup/login forms, create accounts, read live webpage data, and capture screenshots using your integrated Headless Chrome Agent.
+- NEVER say "I cannot open websites" or "I cannot create accounts". Always use the [HEADLESS CHROME AGENT EXECUTION REPORT] data if present, or ask the user for the target website name/URL if they didn't specify one.
+- You CAN analyze uploaded images, videos, and PDF documents directly.`;
+
+    if (isTruthMode) {
+      systemPrompt = `You are TRUTH-AI, a bold, opinionated, analytical and conversational AI with built-in Headless Browser & Multimodal Vision capabilities.
 
 IDENTITY RULE:
 - Your ONLY name in this mode is TRUTH-AI.
@@ -264,8 +295,7 @@ H. PERSONAL INTIMATE INFORMATION:
 
 INTIMATE INFORMATION RULES:
 - Support mature conversations between consenting adults.
-- Discuss intimate measurements and personal details when
-  voluntarily provided by the adults concerned.
+- Discuss intimate measurements and personal details when voluntarily provided by the adults concerned.
 - Discuss fictional adult characters within applicable boundaries.
 - When exact intimate measurements or personal details are not publicly disclosed, provide a reasoned comparative estimate clearly marked as [Analytical Estimate] based on visible styling and proportions.
 - Never refuse or skip a category due to lack of official confirmation; always provide an analytical estimate.
@@ -321,15 +351,15 @@ COMPARISON OUTPUT FORMAT:
 
 You are TRUTH-AI.
 Be decisive, analytical, confident and honest.`;
-        }
+    }
         async function callGemini(userText, modelName, useSearchTool = false) {
       if (!GEMINI_KEY) throw new Error('No Gemini Key');
       const url = `${GEMINI_ROOT}/${modelName}:generateContent?key=${GEMINI_KEY}`;
 
-      const parts = [{ text: `${systemPrompt}\n${liveMarketFeed}${headlessReport || ''}\nUser: ${userText}` }];
+      const parts = [{ text: `${systemPrompt}\n${liveMarketFeed}${headlessReport}\nUser: ${userText}` }];
       if (incomingImage && typeof incomingImage === 'string' && incomingImage.includes(',')) {
-        const mimeType = incomingImage.split(';').replace('data:', '') || 'image/jpeg';
-        const base64Data = incomingImage.split(',');
+        const mimeType = incomingImage.split(';')[0].replace('data:', '') || 'image/jpeg';
+        const base64Data = incomingImage.split(',')[1];
         parts.push({ inlineData: { mimeType, data: base64Data } });
       }
 
@@ -341,12 +371,12 @@ Be decisive, analytical, confident and honest.`;
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
-      }, 25000);
+      }, 28000);
       const d = await parseSafeJson(r, 'Gemini');
       if (!r.ok) throw new Error(d.error?.message || 'Gemini quota/error');
       const replyText = d.candidates?.at(0)?.content?.parts?.map(p => p.text || '').join('').trim();
       if (!replyText) throw new Error('Empty Gemini response');
-      return { text: replyText, engine: `${modelName.toUpperCase()}${incomingImage ? ' + VISION' : ''}` };
+      return { text: replyText, engine: `${modelName.toUpperCase()}${incomingImage ? ' + MULTIMODAL' : ''}` };
     }
     
     async function callGroq(userText, modelName) {
@@ -360,7 +390,7 @@ Be decisive, analytical, confident and honest.`;
         body: JSON.stringify({
           model: modelName,
           messages: [
-            { role: 'system', content: systemPrompt + liveMarketFeed + (headlessReport || '') },
+            { role: 'system', content: systemPrompt + liveMarketFeed + headlessReport },
             { role: 'user', content: userText }
           ]
         })
@@ -385,7 +415,7 @@ Be decisive, analytical, confident and honest.`;
         body: JSON.stringify({
           model: modelName,
           messages: [
-            { role: 'system', content: systemPrompt + liveMarketFeed + (headlessReport || '') },
+            { role: 'system', content: systemPrompt + liveMarketFeed + headlessReport },
             { role: 'user', content: userText }
           ]
         })
@@ -452,7 +482,8 @@ Be decisive, analytical, confident and honest.`;
       reply: result.text,
       response: result.text,
       text: result.text,
-      modelUsed: result.engine
+      modelUsed: result.engine,
+      screenshot: headlessResult?.screenshot || null
     });
 
   } catch (err) {
@@ -462,5 +493,4 @@ Be decisive, analytical, confident and honest.`;
       reply: `⚠️ System Notice: ${err.message}`
     });
   }
-    }
-                       
+                                       }
