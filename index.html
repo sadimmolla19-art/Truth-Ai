@@ -1103,29 +1103,23 @@ async function executeSatyexaDeploy() {
   
   
 <!-- SATYEXA-STUDIO-START -->
-<!-- Satyexa Mobile UI/UX & Overlap Fix -->
 <style>
-  /* Add sufficient bottom padding to prevent floating buttons from overlapping footer text */
-  body {
-    padding-bottom: 95px !important;
+  /* Push footer and main wrapper up so floating buttons never overlap text */
+  footer, 
+  div[style*="Architecture"], 
+  .app-container, 
+  main {
+    margin-bottom: 85px !important;
+    padding-bottom: 30px !important;
   }
 
-  /* Optimize floating action buttons and layout responsiveness on mobile screens */
   @media (max-width: 640px) {
     #satyexa-deploy-fab,
-    .quick-tools-btn,
     button[onclick*="Deploy"],
     button[onclick*="Quick"] {
-      bottom: 14px !important;
-      padding: 8px 14px !important;
-      font-size: 12px !important;
-      z-index: 999 !important;
-    }
-
-    /* Stack Split View vertically on mobile screens for better readability */
-    .split-container,
-    [class*="split"] {
-      flex-direction: column !important;
+      bottom: 10px !important;
+      padding: 7px 12px !important;
+      font-size: 11px !important;
     }
   }
 </style>
