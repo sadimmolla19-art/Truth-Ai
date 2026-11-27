@@ -684,20 +684,46 @@
 
 <button id="satyexa-deploy-fab" onclick="document.getElementById('satyexa-deploy-modal').style.display='block'" style="position:fixed;bottom:14px;right:14px;z-index:99999;background:linear-gradient(135deg,#00f2fe,#4facfe);color:#000;border:none;border-radius:50px;padding:9px 14px;font-weight:bold;font-size:12px;cursor:pointer;">⚡ Deploy Studio</button>
 
-<div id="satyexa-deploy-modal" style="display:none;position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,0.9);padding:15px;overflow-y:auto;">
-  <div style="max-width:480px;margin:15px auto;background:#111827;border:1px solid #374151;border-radius:14px;padding:16px;">
-    <div style="display:flex;justify-content:space-between;margin-bottom:10px;"><h3 style="margin:0;color:#38bdf8;">🚀 Universal Deploy Studio</h3><button onclick="document.getElementById('satyexa-deploy-modal').style.display='none'" style="background:none;border:none;color:#fff;font-size:18px;">✕</button></div>
-    <select id="sd-mode"><option value="user">🌐 User Mode</option><option value="admin">👑 Admin Mode</option></select>
-    <input id="sd-password" type="password" placeholder="Admin Password (if Admin Mode)">
-    <select id="sd-platform"><option value="ai_edit">🧠 GitHub AI Smart-Patch</option><option value="github">📄 GitHub Full File</option><option value="vercel">▲ Vercel Deploy</option></select>
-    <input id="sd-u-token" type="password" placeholder="GitHub / Vercel Token">
-    <input id="sd-u-extra1" placeholder="GitHub Username">
-    <input id="sd-u-extra2" placeholder="Repository Name">
-    <input id="sd-filepath" value="index.html">
-    <textarea id="satyexa-ai-instruction" rows="2" placeholder="🧠 AI Instruction..."></textarea>
-    <textarea id="sd-code" rows="4" placeholder="Paste code..."></textarea>
-    <button onclick="executeSatyexaDeploy()" id="sd-btn" class="btn-full">🚀 Execute & Deploy</button>
-    <div id="sd-status" style="margin-top:8px;font-size:12px;color:#fbbf24;"></div>
+<div id="satyexa-deploy-modal" style="display:none;position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,0.88);backdrop-filter:blur(6px);padding:15px;overflow-y:auto;font-family:sans-serif;color:#fff;">
+  <div style="max-width:500px;margin:15px auto;background:#111827;border:1px solid #374151;border-radius:14px;padding:18px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <h3 style="margin:0;color:#38bdf8;font-size:17px;">🚀 Satyexa Universal Coder & Deployer</h3>
+      <button onclick="toggleDeployModal()" style="background:none;border:none;color:#9ca3af;font-size:20px;cursor:pointer;">✕</button>
+    </div>
+
+    <label style="font-size:12px;color:#9ca3af;">Access Mode:</label>
+    <select id="sd-mode" onchange="toggleSdFields()" style="width:100%;padding:9px;margin:5px 0 10px;background:#1f2937;color:#fff;border:1px solid #374151;border-radius:8px;">
+      <option value="user">🌐 User Mode (Connect Your GitHub / Vercel / CF / Any App)</option>
+      <option value="admin">👑 Admin Mode (Owner Access - Password Locked)</option>
+    </select>
+
+    <div id="sd-admin-box" style="display:none;">
+      <input id="sd-password" type="password" placeholder="Enter Admin Password..." style="width:100%;box-sizing:border-box;padding:9px;margin-bottom:10px;background:#1f2937;color:#fff;border:1px solid #374151;border-radius:8px;">
+    </div>
+
+    <label style="font-size:12px;color:#9ca3af;">Target Platform & Action:</label>
+    <select id="sd-platform" onchange="toggleSdFields()" style="width:100%;padding:9px;margin:5px 0 10px;background:#1f2937;color:#fff;border:1px solid #374151;border-radius:8px;">
+      <option value="ai_edit">🧠 GitHub AI Smart-Patch (Edit via Instruction)</option>
+      <option value="github_inject">✨ GitHub Smart Auto-Inject (Add code without deleting old)</option>
+      <option value="github">📄 GitHub Full File (Create new or overwrite entire file)</option>
+      <option value="vercel">▲ Vercel (Instant Live Website Deployment)</option>
+      <option value="cloudflare">☁️ Cloudflare (Deploy Worker Script)</option>
+      <option value="universal">🔌 Universal Custom API (Any Coding/Hosting Platform)</option>
+    </select>
+
+    <div id="sd-user-box" style="display:block;background:#1f2937;padding:10px;border-radius:8px;margin-bottom:10px;">
+      <input id="sd-u-token" type="password" placeholder="API / Personal Access Token" style="width:100%;box-sizing:border-box;padding:8px;margin-bottom:6px;background:#111827;color:#fff;border:1px solid #374151;border-radius:6px;">
+      <input id="sd-u-extra1" type="text" placeholder="GitHub Username / CF Account ID / Custom App API URL" style="width:100%;box-sizing:border-box;padding:8px;margin-bottom:6px;background:#111827;color:#fff;border:1px solid #374151;border-radius:6px;">
+      <input id="sd-u-extra2" type="text" placeholder="Repository Name / Project Name (If applicable)" style="width:100%;box-sizing:border-box;padding:8px;margin-bottom:6px;background:#111827;color:#fff;border:1px solid #374151;border-radius:6px;">
+      <button type="button" onclick="saveUserVault()" style="width:100%;padding:6px;background:#374151;color:#38bdf8;border:1px solid #4b5563;border-radius:6px;font-size:11px;cursor:pointer;">💾 Save Keys Locally in Browser</button>
+    </div>
+
+    <input id="sd-filepath" type="text" value="index.html" placeholder="Target File Path (e.g., index.html, api/chat.js)" style="width:100%;box-sizing:border-box;padding:9px;margin-bottom:8px;background:#1f2937;color:#fff;border:1px solid #374151;border-radius:8px;">
+    <textarea id="satyexa-ai-instruction" rows="3" placeholder="🧠 AI Instruction (বাংলা বা English-এ লিখুন কী বদলাতে হবে)..." style="width:100%;margin-bottom:8px;padding:9px;border-radius:8px;background:#0f172a;color:#38bdf8;border:1px solid #38bdf8;font-size:13px;box-sizing:border-box;"></textarea>
+    <textarea id="sd-code" rows="6" placeholder="AI-generated code will appear here automatically, or paste manually..." style="width:100%;box-sizing:border-box;padding:9px;margin-bottom:10px;background:#1f2937;color:#10b981;font-family:monospace;border:1px solid #374151;border-radius:8px;"></textarea>
+
+    <button onclick="executeSatyexaDeploy()" id="sd-btn" style="width:100%;padding:11px;background:#10b981;color:#000;font-weight:bold;border:none;border-radius:8px;cursor:pointer;">🚀 Execute & Deploy</button>
+    <div id="sd-status" style="margin-top:10px;font-size:12px;color:#fbbf24;word-break:break-all;"></div>
   </div>
 </div>
 
@@ -711,52 +737,99 @@
 </div>
 
 <script>
-async function executeSatyexaDeploy() {
-  const btn = document.getElementById('sd-btn'), status = document.getElementById('sd-status');
-  btn.disabled = true; btn.innerText = '⏳ Deploying...';
-  try {
-    const res = await fetch('/api/deployer', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        mode: document.getElementById('sd-mode').value,
-        password: document.getElementById('sd-password').value,
-        platform: 'github', action: document.getElementById('sd-platform').value,
-        fileData: { path: document.getElementById('sd-filepath').value, content: document.getElementById('sd-code').value, instruction: document.getElementById('satyexa-ai-instruction').value },
-        userConfig: { ghToken: document.getElementById('sd-u-token').value, ghOwner: document.getElementById('sd-u-extra1').value, ghRepo: document.getElementById('sd-u-extra2').value }
-      })
-    });
-    const data = await res.json();
-    status.innerText = data.success ? '✅ ' + data.message : '❌ ' + (data.error || 'Failed');
-  } catch (e) { status.innerText = '❌ ' + e.message; }
-  btn.disabled = false; btn.innerText = '🚀 Execute & Deploy';
+function saveUserVault() {
+  localStorage.setItem('satyexa_user_vault', JSON.stringify({
+    token: document.getElementById('sd-u-token').value.trim(),
+    extra1: document.getElementById('sd-u-extra1').value.trim(),
+    extra2: document.getElementById('sd-u-extra2').value.trim()
+  }));
+  const st = document.getElementById('sd-status');
+  st.style.color = '#38bdf8'; st.innerText = '💾 Credentials saved safely in your browser!';
 }
 
-window._analyzeShareMarket = async function() {
-  const sym = document.getElementById('stx-share-name').value.trim().toUpperCase();
-  const out = document.getElementById('stx-share-output');
-  if (!sym) return;
-  out.innerText = '⏳ Analyzing ' + sym + '...';
-  const res = await fetch('/api/chat', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ messages: [{ role: 'user', text: 'Give live price, support/resistance and technical trend analysis in Bengali for: ' + sym }], webSearch: true, model: 'gemini-4-neon' })
-  });
-  const data = await res.json();
-  out.innerText = data.reply || data.error;
-};
-
-window.addEventListener('DOMContentLoaded', () => {
-  const list = document.getElementById('sessionList');
-  if (list && !document.getElementById('satyexa-restored-workspace')) {
-    const ws = document.createElement('div');
-    ws.id = 'satyexa-restored-workspace';
-    ws.style.cssText = 'margin:8px 0;padding-top:8px;border-top:1px solid #1e293b;';
-    ws.innerHTML = `<div style="font-size:11px;font-weight:bold;color:#facc15;margin-bottom:6px;">⚡ SATYEXA PRO WORKSPACE</div>
-      <div onclick="toggleSidebar();document.getElementById('satyexa-share-modal').style.display='block'" style="padding:8px 10px;margin-bottom:6px;border-radius:8px;background:linear-gradient(90deg,#7c3aed,#db2777);font-size:12.5px;font-weight:bold;cursor:pointer;">📊 Share Bazar & Price Trend</div>
-      <div onclick="toggleSidebar();document.getElementById('satyexa-deploy-modal').style.display='block'" style="padding:8px 10px;margin-bottom:6px;border-radius:8px;background:linear-gradient(90deg,#0284c7,#0d9488);font-size:12.5px;font-weight:bold;cursor:pointer;">🚀 Universal Deploy Studio</div>
-      <div onclick="toggleSidebar();document.getElementById('satyexa-tools-box').style.display='block'" style="padding:8px 10px;margin-bottom:6px;border-radius:8px;background:linear-gradient(90deg,#0284c7,#2563eb);font-size:12.5px;font-weight:bold;cursor:pointer;">🛠️ Quick Calc & Notes</div>`;
-    list.parentNode.insertBefore(ws, list);
+function toggleDeployModal(prefillCode) {
+  const m = document.getElementById('satyexa-deploy-modal');
+  if (typeof prefillCode === 'string') {
+    document.getElementById('sd-code').value = prefillCode;
+    m.style.display = 'block';
+    return;
   }
-});
+  m.style.display = m.style.display === 'none' ? 'block' : 'none';
+}
+
+function toggleSdFields() {
+  const mode = document.getElementById('sd-mode').value;
+  document.getElementById('sd-admin-box').style.display = mode === 'admin' ? 'block' : 'none';
+  document.getElementById('sd-user-box').style.display = mode === 'user' ? 'block' : 'none';
+}
+
+setInterval(() => {
+  document.querySelectorAll('button').forEach(btn => {
+    if (btn.innerText && btn.innerText.includes('Run Live Preview') && !btn.dataset.satyexaHooked) {
+      btn.dataset.satyexaHooked = 'true';
+      const autoBtn = document.createElement('button');
+      autoBtn.type = 'button';
+      autoBtn.innerText = '⚡ One-Click Deploy';
+      autoBtn.style.cssText = 'background:linear-gradient(135deg,#00f2fe,#4facfe);color:#000;border:none;border-radius:6px;padding:3px 8px;font-size:10.5px;font-weight:bold;cursor:pointer;';
+      autoBtn.onclick = () => {
+        let c = btn.parentElement, codeText = '';
+        for (let i = 0; i < 5; i++) {
+          if (!c) break;
+          const pre = c.querySelector('pre, code');
+          if (pre && pre.innerText.trim().length > 5) { codeText = pre.innerText; break; }
+          c = c.parentElement;
+        }
+        toggleDeployModal(codeText || '');
+      };
+      btn.parentElement.appendChild(autoBtn);
+    }
+  });
+}, 800);
+
+async function executeSatyexaDeploy() {
+  const btn = document.getElementById('sd-btn'), status = document.getElementById('sd-status');
+  const mode = document.getElementById('sd-mode').value;
+  const rawPlatform = document.getElementById('sd-platform').value;
+  const path = document.getElementById('sd-filepath').value.trim();
+  const content = document.getElementById('sd-code').value;
+  const instruction = (document.getElementById('satyexa-ai-instruction')?.value || '').trim();
+
+  if (!content && !instruction) { status.innerText = '⚠️ Please enter code or AI instruction first!'; return; }
+  btn.disabled = true; btn.innerText = '⏳ Deploying...'; status.innerText = '';
+
+  const token = document.getElementById('sd-u-token').value.trim();
+  const extra1 = document.getElementById('sd-u-extra1').value.trim();
+  const extra2 = document.getElementById('sd-u-extra2').value.trim();
+
+  const isAiEdit = rawPlatform === 'ai_edit' || instruction.length > 0;
+  const isInject = rawPlatform === 'github_inject';
+  const platform = (isAiEdit || isInject) ? 'github' : rawPlatform;
+  const action = isAiEdit ? 'ai_edit' : (isInject ? 'smart_inject' : (platform === 'github' ? 'push_file' : (platform === 'vercel' ? 'deploy_vercel' : 'deploy_cf_worker')));
+
+  const payload = {
+    mode,
+    password: document.getElementById('sd-password').value,
+    platform,
+    action,
+    fileData: { path, content, instruction, projectName: extra2 || 'satyexa-app', workerName: extra2 || 'satyexa-worker' },
+    userConfig: { ghToken: token, ghOwner: extra1, ghRepo: extra2, vercelToken: token, cfToken: token, cfAccountId: extra1 },
+    customRequest: platform === 'universal' ? { endpointUrl: extra1, method: 'POST', headers: token ? { Authorization: `Bearer ${token}` } : {}, payload: content } : null
+  };
+
+  try {
+    const res = await fetch('/api/deployer', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.success) {
+      status.style.color = '#34d399';
+      status.innerText = '✅ ' + data.message + (data.liveUrl ? ' Live URL: ' + data.liveUrl : '');
+    } else {
+      status.style.color = '#f87171';
+      status.innerText = '❌ ' + (data.error || 'Deployment failed');
+    }
+  } catch (e) { status.style.color = '#f87171'; status.innerText = '❌ Network Error: ' + e.message; }
+  
 </script>
 </body>
 </html>
