@@ -87,12 +87,19 @@ export default async function handler(req, res) {
     const liveMarketFeed = isMarketQuery ? await getLiveCryptoSnapshot(prompt) : '';
     const isTruthMode = Boolean(body.truthMode || body.truth || String(body.model || '').toLowerCase().includes('truth'));
         // Headless Browser Agent Bridge (Works in BOTH APEX & TRUTH-AI Modes)
-    async function runHeadlessAgent(userPrompt) {
-      const urlMatch = userPrompt.match(/https?:\/\/[^\s"'<>]+/i);
+        async function runHeadlessAgent(userPrompt) {
+      let urlMatch = userPrompt.match(/https?:\/\/[^\s"'<>]+/i);
       const browserlessKey = process.env.BROWSERLESS_API_KEY;
-      if (!urlMatch || !browserlessKey) return null;
+      if (!browserlessKey) return null;
 
-      const targetUrl = urlMatch;
+      let targetUrl = urlMatch ? urlMatch : '';
+      if (!targetUrl) {
+        if (/microsoft|outlook|hotmail/i.test(userPrompt)) targetUrl = 'https://signup.live.' + 'com';
+        else if (/github/i.test(userPrompt)) targetUrl = 'https://github.' + 'com/signup';
+        else if (/reddit/i.test(userPrompt)) targetUrl = 'https://www.reddit.' + 'com/register';
+      }
+      if (!targetUrl) return null;
+          
       const isFormAction = /account|register|sign up|signup|fill|form|create|submit|login/i.test(userPrompt);
       const emailMatch = userPrompt.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
       const passMatch = userPrompt.match(/pass(?:word)?[:=\s]+([^\s]+)/i);
@@ -316,13 +323,21 @@ You are TRUTH-AI.
 Be decisive, analytical, confident and honest.`;
 }
 
-        async function callGemini(userText, modelName, useSearchTool = false) {
+            const incomingImage = body.image || body.imageData || body.fileData || body.attachment || (Array.isArray(body.images) ? body.images[0] : '') || '';
+
+    async function callGemini(userText, modelName, useSearchTool = false) {
       if (!GEMINI_KEY) throw new Error('No Gemini Key');
       const url = `${GEMINI_ROOT}/${modelName}:generateContent?key=${GEMINI_KEY}`;
-      const payload = {
-        contents: [{ parts: [{ text: `${systemPrompt}\n${liveMarketFeed}${headlessReport || ''}\nUser: ${userText}` }] }]
-      };
-      if (useSearchTool) {
+
+      const parts = [{ text: `${systemPrompt}\n${liveMarketFeed}${headlessReport || ''}\nUser: ${userText}` }];
+      if (incomingImage && typeof incomingImage === 'string' && incomingImage.includes(',')) {
+        const mimeType = incomingImage.split(';')[0].replace('data:', '') || 'image/jpeg';
+        const base64Data = incomingImage.split(',')[1];
+        parts.push({ inlineData: { mimeType, data: base64Data } });
+      }
+
+      const payload = { contents: [{ parts }] };
+      if (useSearchTool && !incomingImage) {
         payload.tools = [{ googleSearch: {} }];
       }
       const r = await fetchWithTimeout(url, {
@@ -334,9 +349,9 @@ Be decisive, analytical, confident and honest.`;
       if (!r.ok) throw new Error(d.error?.message || 'Gemini quota/error');
       const replyText = d.candidates?.at(0)?.content?.parts?.map(p => p.text || '').join('').trim();
       if (!replyText) throw new Error('Empty Gemini response');
-      return { text: replyText, engine: `${modelName.toUpperCase()}${useSearchTool ? ' + LIVE WEB' : ''}` };
+      return { text: replyText, engine: `${modelName.toUpperCase()}${incomingImage ? ' + VISION' : ''}` };
     }
-
+    
     async function callGroq(userText, modelName) {
       if (!GROQ_KEY) throw new Error('No Groq Key');
       const r = await fetchWithTimeout(GROQ_URL, {
@@ -386,8 +401,15 @@ Be decisive, analytical, confident and honest.`;
     }
 
     // Priority Waterfall: Flagship with Live Google Search FIRST -> Standard Flagship -> Free Fallbacks LAST
-    const fallbackChain = [];
-        if (isTruthMode) {
+        const fallbackChain = [];
+    if (incomingImage) {
+      fallbackChain.push(
+        () => callGemini(prompt, 'gemini-2.5-pro', false),
+        () => callGemini(prompt, 'gemini-2.5-flash', false),
+        () => callGemini(prompt, 'gemini-flash-latest', false)
+      );
+    } else if (isTruthMode) {
+      
       fallbackChain.push(
         () => callOpenRouter(prompt, 'deepseek/deepseek-r1:free'),
         () => callOpenRouter(prompt, 'openrouter/auto'),
