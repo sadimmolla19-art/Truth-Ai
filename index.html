@@ -1,75 +1,928 @@
-export default {
-  async fetch(request, env, ctx) {
-    const VERCEL_DOMAIN = "satyexaai.vercel.app";
-    const url = new URL(request.url);
-    const originalHost = url.hostname;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="google-site-verification" content="VXruj5uTl_YVaIVBS_9mWzVMLq7xRwsv8HK9ggRYoYY" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#030712">
+<title>Satyexa AI • Genesis Prime v20.0 APEX (Python Edition)</title>
+  <meta name="description" content="Satyexa AI - Genesis Prime v20.0 APEX. An intelligent all-rounder AI assistant created by Sadim Molla to help with coding, writing, and daily tasks.">
+<meta name="keywords" content="Satyexa AI, Satyexa, Genesis Prime, AI Assistant, Sadim Molla, Bangladesh AI">
+<meta name="author" content="Sadim Molla"> 
+  <link rel="manifest" href="/manifest.json" />  
+<style>
+  :root {
+    --bg: #030712; --card: rgba(13, 20, 38, 0.96); --border: rgba(56, 189, 248, 0.35);
+    --accent: #10b981; --cyan: #06b6d4; --purple: #8b5cf6; --gold: #f59e0b; --text: #f8fafc; --muted: #94a3b8;
+  }
+  * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+  body { margin: 0; background: radial-gradient(circle at top right, #0f172a, #030712 75%); color: var(--text); display: flex; flex-direction: column; min-height: 100vh; }
+        html { overflow-x: hidden; overflow-y: auto; height: auto !important; }
+    body { max-width: 100%; overflow: hidden !important; height: auto !important; min-height: 0 !important; display: block !important; padding-bottom: 12px; }
+  
+  .logo-area { display: flex; align-items: center; gap: 8px; }
+  .menu-btn { background: #1e293b; border: 1px solid #334155; color: #38bdf8; padding: 6px 10px; border-radius: 8px; font-size: 16px; cursor: pointer; }
+  .logo { font-size: 17.5px; font-weight: 900; letter-spacing: 0.5px; background: linear-gradient(90deg, #10b981, #38bdf8, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .badge { font-size: 9.5px; background: linear-gradient(135deg, rgba(245,158,11,0.2), rgba(168,85,247,0.25)); color: #fde68a; padding: 2px 7px; border-radius: 20px; border: 1px solid rgba(245,158,11,0.5); font-weight: 800; }
+  .user-info { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+  .logout-btn { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.4); padding: 5px 9px; font-size: 11px; border-radius: 8px; cursor: pointer; font-weight: 600; }
 
-    if (request.method === "OPTIONS") {
-      return new Response(null, {
-        status: 204,
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
-          "Access-Control-Allow-Headers": request.headers.get("Access-Control-Request-Headers") || "*",
-          "Access-Control-Max-Age": "86400",
-        },
-      });
+  .sidebar { position: fixed; top: 0; left: -285px; width: 275px; height: 100vh; background: #070b16; border-right: 1px solid var(--border); z-index: 1000; transition: 0.3s ease; padding: 16px; display: flex; flex-direction: column; }
+  .sidebar.open { left: 0; }
+  .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 999; }
+  .sidebar-overlay.open { display: block; }
+  .session-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 7px; margin-top: 12px; }
+  .session-item { display: flex; justify-content: space-between; align-items: center; padding: 9px 11px; background: #0f172a; border: 1px solid #1e293b; border-radius: 9px; font-size: 12.5px; cursor: pointer; color: #cbd5e1; }
+  .session-item.active { border-color: var(--accent); background: rgba(16, 185, 129, 0.12); color: white; font-weight: 600; }
+
+  main { flex: 1; max-width: 1020px; width: 100%; margin: auto; padding: 10px; }
+  .card { background: var(--card); backdrop-filter: blur(18px); border: 1px solid var(--border); border-radius: 16px; padding: 16px; box-shadow: 0 20px 45px rgba(0,0,0,0.65); }
+
+  input, textarea, select { width: 100%; padding: 11px 13px; margin: 6px 0 12px; background: #060a16; color: white; border: 1px solid #1e293b; border-radius: 11px; font-size: 14.5px; outline: none; transition: 0.2s; }
+  input:focus, textarea:focus, select:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2); }
+  button { background: linear-gradient(135deg, #059669, #0284c7); color: white; border: 0; padding: 10px 16px; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+  .btn-full { width: 100%; } .btn-secondary { background: #1e293b; border: 1px solid #334155; color: #e2e8f0; }
+
+  nav { display: flex; gap: 4px; margin-bottom: 10px; background: var(--card); padding: 5px; border-radius: 13px; border: 1px solid var(--border); }
+  nav button { flex: 1; background: transparent; color: var(--muted); padding: 8px 4px; font-size: 12px; border-radius: 9px; }
+  nav button.active { background: linear-gradient(135deg, #10b981, #2563eb); color: white; }
+
+  .top-status { display: flex; justify-content: space-between; align-items: center; gap: 5px; margin-bottom: 8px; flex-wrap: wrap; }
+  .engine-select { flex: 1; min-width: 175px; margin: 0; padding: 6px 8px; font-size: 11.5px; background: #0f172a; border-color: #334155; color: #38bdf8; font-weight: 600; }
+  .web-toggle { background: #1e293b; border: 1px solid #334155; color: #94a3b8; padding: 6px 8px; font-size: 11px; border-radius: 8px; }
+  .web-toggle.on { background: rgba(6, 182, 212, 0.2); border-color: #06b6d4; color: #38bdf8; }
+  .think-toggle.on { background: rgba(168, 85, 247, 0.25); border-color: #a855f7; color: #e9d5ff; }
+    .chat-container { display: flex; gap: 10px; }
+  #messages, #messagesSplit { flex: 1; height: 50vh; overflow-y: auto; background: #040711; padding: 12px; border-radius: 13px; border: 1px solid #1e293b; display: flex; flex-direction: column; gap: 12px; }
+  .msg-wrap { display: flex; flex-direction: column; max-width: 93%; }
+  .msg-wrap.user-wrap { align-self: flex-end; }
+  .msg-wrap.ai-wrap { align-self: flex-start; }
+  .msg { padding: 11px 14px; border-radius: 14px; line-height: 1.6; font-size: 14px; overflow-wrap: anywhere; white-space: pre-wrap; }
+  .user { background: linear-gradient(135deg, #059669, #0d9488); color: white; border-bottom-right-radius: 4px; }
+  .ai { background: #0f172a; border: 1px solid #1e293b; border-left: 3px solid var(--gold); border-bottom-left-radius: 4px; }
+  .engine-tag { font-size: 9.5px; color: #fbbf24; font-weight: 800; margin-bottom: 4px; text-transform: uppercase; }
+  .msg-actions { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+  .mini-btn { background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 3px 8px; font-size: 10.5px; border-radius: 6px; }
+  .run-btn { background: rgba(16,185,129,0.2); color: #34d399; border-color: #10b981; }
+  pre { background: #020617; border: 1px solid #334155; padding: 10px; border-radius: 8px; overflow-x: auto; font-family: monospace; font-size: 12.5px; color: #38bdf8; margin: 6px 0; }
+
+  .sandbox-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 2000; display: flex; flex-direction: column; padding: 16px; }
+  .sandbox-header { display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 10px 14px; border-radius: 12px 12px 0 0; border: 1px solid #334155; }
+  .sandbox-frame { flex: 1; background: white; border: none; border-radius: 0 0 12px 12px; width: 100%; }
+
+  .input-wrapper { margin-top: 10px; background: #060a16; border: 1px solid #334155; border-radius: 13px; padding: 8px; }
+  .input-wrapper textarea { margin: 0; border: none; background: transparent; padding: 4px 6px; height: 48px; resize: none; font-size: 14.5px; }
+  .input-bottom-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; padding-top: 6px; border-top: 1px solid #1e293b; }
+  .left-tools { display: flex; gap: 6px; }
+  .icon-btn { background: #1e293b; border: 1px solid #334155; padding: 6px 11px; font-size: 15px; border-radius: 8px; }
+  .icon-btn.recording { background: #dc2626; border-color: #ef4444; animation: pulse 1s infinite; }
+  @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+  .send-btn { padding: 7px 18px; background: linear-gradient(135deg, #10b981, #3b82f6); border-radius: 9px; font-size: 13.5px; }
+
+  #previewBox { display: flex; align-items: center; gap: 10px; margin-top: 8px; background: #0f172a; padding: 7px 12px; border-radius: 10px; border: 1px solid #334155; }
+  #previewBox img { height: 40px; width: 40px; object-fit: cover; border-radius: 6px; }
+  #imageResult img { width: 100%; max-height: 420px; object-fit: contain; border-radius: 13px; margin-top: 12px; border: 1px solid var(--border); }
+
+  .key-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; }
+  .key-box { background: #080d1d; padding: 10px; border-radius: 10px; border: 1px solid #1e293b; }
+  .key-box label { font-size: 11px; color: #38bdf8; font-weight: 700; display: block; }
+  .key-box input { margin: 5px 0 0; padding: 8px 10px; font-size: 12px; }
+
+  .auth-msg { font-size: 12px; padding: 8px; border-radius: 8px; margin-bottom: 10px; display: none; }
+  .auth-msg.err { display: block; background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.4); }
+  .auth-msg.ok { display: block; background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.4); }
+
+  .panel { display: none; } .panel.active { display: block; } .hidden { display: none !important; }
+  .small { font-size: 12px; color: var(--muted); } .toggle-link { color: var(--accent); cursor: pointer; font-weight: 700; text-decoration: underline; }
+  footer { text-align: center; color: #64748b; padding: 12px; font-size: 11.5px; border-top: 1px solid rgba(30,41,59,0.5); margin-top: 16px; }
+  footer strong { color: #10b981; }
+</style>
+<!-- Satyexa Math (KaTeX) & Code Highlighter -->
+  <script>
+  (function() {
+    const cdn1 = atob("aHR0cHM6Ly9jZG4uanNkZWxpdnIubmV0L25wbS9rYXRleEAwLjE2LjkvZGlzdC8=");
+    const cdn2 = atob("aHR0cHM6Ly9jZG5qcy5jbG91ZGZsYXJlLmNvbS9hamF4L2xpYnMvaGlnaGxpZ2h0LmpzLzExLjkuMC8=");
+    document.write(`<link rel="stylesheet" href="${cdn1}katex.min.css">`);
+    document.write(`<script src="${cdn1}katex.min.js"><\/script>`);
+    document.write(`<script src="${cdn1}contrib/auto-render.min.js"><\/script>`);
+    document.write(`<link rel="stylesheet" href="${cdn2}styles/atom-one-dark.min.css">`);
+    document.write(`<script src="${cdn2}highlight.min.js"><\/script>`);
+  })();
+</script>
+</head>
+<body>
+  <div id="sandboxModal" class="sandbox-modal hidden">
+  <div class="sandbox-header">
+    <strong style="color:#34d399;">💻 Satyexa Live Code Sandbox</strong>
+    <button class="logout-btn" onclick="closeSandbox()">✕ Close Preview</button>
+  </div>
+  <iframe id="sandboxFrame" class="sandbox-frame"></iframe>
+</div>
+
+<div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+<aside id="chatSidebar" class="sidebar">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+    <strong style="color:#10b981; font-size:15px;">✦ Satyexa Chats</strong>
+    <button onclick="toggleSidebar()" style="background:none; color:#94a3b8; border:none; font-size:18px; padding:2px 6px;">✕</button>
+  </div>
+  <button onclick="createNewSession()" class="btn-full" style="margin-bottom:8px;">+ New Chat</button>
+  <button onclick="exportCurrentChat()" class="btn-full btn-secondary" style="font-size:12px; padding:7px;">📥 Export Chat (.txt)</button>
+  <div id="sessionList" class="session-list"></div>
+</aside>
+
+<header>
+  <div class="logo-area">
+    <button id="sidebarBtn" class="menu-btn hidden" onclick="toggleSidebar()">☰</button>
+    <span class="logo">✦ SATYEXA AI</span>
+    <span class="badge">v20.0 PY-APEX</span>
+  </div>
+<div id="userControls" class="user-info hidden" style="display:flex; align-items:center; gap:8px;">
+  <div onclick="openProfileModal()" style="display:flex; align-items:center; gap:6px; cursor:pointer; background:#1e293b; padding:4px 10px; border-radius:20px; border:1px solid #334155;" title="Edit Profile">
+<img id="navAvatar" src="data:image/svg+xml;utf8,<svg xmlns='http://w3.org' viewBox='0 0 24 24' fill='%2338bdf8'><circle cx='12' cy='8' r='4'/><path d='M12 14c-4.42 0-8 1.79-8 4v2h16v-2c0-2.21-3.58-4-8-4z'/></svg>" style="width:24px; height:24px; border-radius:50%; object-fit:cover; background:#0f172a;">
+    <span id="currentUserDisplay" style="color:#38bdf8; font-weight:700; font-size:13px;">User</span>
+  </div>
+  <button class="logout-btn" onclick="logout()">Logout</button>
+</div>
+</header>
+
+<main>
+  <div id="authCard" class="card" style="max-width: 430px; margin: 20px auto;">
+    <h2 id="authTitle" style="margin:0 0 6px; font-size:20px;">🔐 Login to Satyexa AI</h2>
+    <p class="small" style="margin:0 0 14px;">Python APEX Multi-Brain AI • <strong>Sadimx Technology</strong></p>
+    <div id="authFeedback" class="auth-msg"></div>
+    <input type="text" id="authFullName" class="hidden" placeholder="Full Name (e.g. Sadim Molla)">
+    <input type="text" id="authUser" placeholder="Username (e.g. sadim19)">
+    <input type="password" id="authPass" placeholder="Password (min 4 characters)">
+    <input type="password" id="authPassConfirm" class="hidden" placeholder="Confirm Password">
+    <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:#cbd5e1; margin-bottom:12px; cursor:pointer;">
+      <input type="checkbox" id="ageCheck" style="width:auto; margin:0;"> I confirm that I am 18 years or older.
+    </label>
+    <button id="authSubmitBtn" class="btn-full" onclick="handleAuth()">Login to Workspace</button>
+    <p class="small" style="text-align:center; margin-top:12px;">
+      <span id="authSwitchText">Don't have an account?</span> 
+      <span class="toggle-link" onclick="toggleAuthMode()" id="authSwitchLink">Create Account</span>
+    </p>
+  </div>
+    <div id="workspace" class="hidden">
+    <nav>
+      <button id="tabChat" class="active" onclick="switchTab('chat')">💬 APEX Chat</button>
+      <button id="tabImage" onclick="switchTab('image')">🎨 8K Studio</button>
+      <button id="tabBrain" onclick="switchTab('brain')">🧬 AI Brain</button>
+      <button id="tabKeys" onclick="switchTab('keys')">⚙ 15 Engines</button>
+    </nav>
+
+    <div id="panelChat" class="panel active card">
+      <div class="top-status">
+        <select id="engineSelect" class="engine-select">
+          <optgroup label="👑 Python Multi-Brain Architecture (Server Active)">
+            <option value="apex-god-mode">👑 APEX GOD-MODE (Python Multi-AI + Critic)</option>
+          </optgroup>
+          <optgroup label="🔥 Google Gemini 4 & 3.8 (Python Server - Free)">
+            <option value="gemini-4-neon">1. Google Gemini 4 Neon (Flagship)</option>
+            <option value="gemini-4-hydrogen">2. Google Gemini 4 Hydrogen (Pro)</option>
+            <option value="gemini-4-carbon">3. Google Gemini 4 Carbon (Deep)</option>
+            <option value="gemini-4-argon">4. Google Gemini 4 Argon (Stable)</option>
+            <option value="gemini-3.8-flash">5. Google Gemini 3.8 Flash (Fast)</option>
+          </optgroup>
+          <optgroup label="⚡ Partner Frontier Models (Add Free Key)">
+            <option value="or-nemotron">6. NVIDIA Nemotron 3 Ultra 550B (Free)</option>
+            <option value="or-gemma4">7. Google Gemma 4 31B IT (Free)</option>
+            <option value="or-particle">8. Particle-1 / DeepSeek V4.1 (Free)</option>
+            <option value="groq-gptoss">9. Groq OpenAI GPT-OSS 120B</option>
+            <option value="groq-llama">10. Groq Llama 3.3 70B Versatile</option>
+            <option value="cerebras">11. Cerebras Qwen 3 32B</option>
+            <option value="mistral">12. Mistral Small 4 Latest</option>
+            <option value="sambanova">13. SambaNova DeepSeek V3</option>
+            <option value="github">14. GitHub Models GPT-4o</option>
+            <option value="or-qwen-coder">15. Qwen3 Coder 480B (Pro Coding - Free)</option>
+            <option value="groq-kimi-k2">16. Groq Kimi K2 Instruct (Deep Context)</option>
+            <option value="groq-qwen3">17. Groq Qwen 3 32B (Super Fast)</option>
+            <option value="or-glm5">18. GLM-5.3 Flash (Multilingual Free)</option>
+            <option value="gemini-3.5-lite">19. Google Gemini 3.5 Flash-Lite (Ultra Fast)</option>
+            <option value="or-auto-free">20. OpenRouter Auto-Free Smart Router</option>
+          </optgroup>
+        </select>
+        <button id="thinkBtn" class="web-toggle think-toggle" onclick="toggleDeepThink()">🧠 Think: OFF</button>
+        <button id="splitBtn" class="web-toggle" onclick="toggleSplitMode()">◫ Split: OFF</button>
+        <button id="webBtn" class="web-toggle" onclick="toggleWeb()">🌐 Web: OFF</button>
+      </div>
+
+      <div class="chat-container">
+        <div id="messages"></div>
+        <div id="messagesSplit" class="hidden"></div>
+      </div>
+
+      <div id="previewBox" class="hidden">
+        <img id="previewImg" src="">
+        <span class="small" style="flex:1;">Image attached (Vision Ready)</span>
+        <button class="mini-btn" onclick="removeImage()">❌ Remove</button>
+      </div>
+
+      <div class="input-wrapper">
+        <textarea id="promptInput" placeholder="Command Satyexa Python APEX (Ask for code, research, math, or web apps)..."></textarea>
+        <div class="input-bottom-bar">
+          <div class="left-tools">
+            <input type="file" id="galleryUpload" accept="image/jpeg,image/png,image/webp,image/gif" multiple class="hidden" onchange="handleImageUpload(event)">
+            <input type="file" id="cameraUpload" accept="image/*" capture="environment" class="hidden" onchange="handleImageUpload(event)">
+            <input type="file" id="imageUpload" accept=".pdf,.txt,.py,.js,.html,.doc,.docx,image/*" multiple class="hidden" onchange="handleImageUpload(event)">
+            <button class="icon-btn" onclick="document.getElementById('galleryUpload').click()" title="Gallery">🖼️</button>
+            <button class="icon-btn" onclick="document.getElementById('cameraUpload').click()" title="Camera">📷</button>
+            <button class="icon-btn" onclick="document.getElementById('imageUpload').click()" title="Files">📎</button>
+            <button id="micBtn" class="icon-btn" onclick="toggleVoice()" title="Voice Input">🎤</button>
+          </div>
+          <button class="send-btn" onclick="sendMessage()">Execute ➤</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="panelImage" class="panel card">
+      <h3 style="margin:0 0 6px;">🎨 Satyexa Ultra HD Image Studio</h3>
+      <p class="small">Describe your imagination in English for instant 8K AI art generation.</p>
+      <textarea id="imgPrompt" rows="3" placeholder="e.g. A futuristic cyberpunk city in Dhaka at night, neon lights, ultra detailed 8k..."></textarea>
+      <button class="btn-full" onclick="generateArt()">✨ Generate HD Artwork</button>
+      <div id="imageResult"></div>
+    </div>
+
+    <div id="panelBrain" class="panel card">
+      <h3 style="margin:0 0 6px;">🧬 Custom AI Brain & System Persona</h3>
+      <p class="small">Set permanent instructions for how Satyexa AI behaves, speaks, and codes for you.</p>
+      <textarea id="customPersonaInput" rows="4" placeholder="e.g. Always act as a Principal Software Architect and explain complex topics in simple Bengali with clean code..."></textarea>
+      <button class="btn-full" onclick="savePersona()">💾 Save AI Brain Persona</button>
+    </div>
+
+    <div id="panelKeys" class="panel card">
+      <h3 style="margin:0 0 6px;">⚙ APEX & Frontier Engine Keys</h3>
+      <p class="small" style="color:#34d399;">✅ Python APEX GOD-MODE & Gemini 4 (Neon, Hydrogen, Carbon, Argon) are ACTIVE via Server! Add free partner keys below to expand the Council.</p>
+      <div class="key-grid">
+        <div class="key-box"><label>1. Google AI Studio (Gemini 4 Server Active)</label><input type="password" id="key_gemini" placeholder="Using Server Gemini 4 by default"></div>
+        <div class="key-box"><label>2. OpenRouter (Nemotron 550B / Gemma 4 / Particle-1)</label><input type="password" id="key_openrouter" placeholder="sk-or-..."></div>
+        <div class="key-box"><label>3. Groq Cloud (GPT-OSS 120B & Llama 3.3)</label><input type="password" id="key_groq" placeholder="gsk_..."></div>
+        <div class="key-box"><label>4. Cerebras Cloud (Qwen 3 32B)</label><input type="password" id="key_cerebras" placeholder="csk-..."></div>
+        <div class="key-box"><label>5. Mistral AI (Mistral Small 4)</label><input type="password" id="key_mistral" placeholder="..."></div>
+        <div class="key-box"><label>6. SambaNova Cloud (DeepSeek V3)</label><input type="password" id="key_sambanova" placeholder="..."></div>
+        <div class="key-box"><label>7. GitHub Models Token (GPT-4o)</label><input type="password" id="key_github" placeholder="ghp_..."></div>
+      </div>
+      <button class="btn-full" style="margin-top:14px;" onclick="saveAllKeys()">💾 Save Partner AI Keys</button>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <strong>Architecture & Ownership:</strong> Developed by <strong>Sadimx Technology</strong> • Owner & Founder: <strong>Sadim Molla</strong>.<br>
+  Satyexa AI © 2026 • Powered by <strong>Sadimx Technology</strong> • Owner: <strong>Sadim Molla</strong>
+</footer>
+    <script>
+  var isSignup = false, webSearch = false, deepThink = false, splitMode = false, attachedImage = null;
+  var currentUser = null, sessions = [], activeSessionId = null;
+
+  var P = "https:" + "//";
+  var URL_OR = P + ["openrouter","ai"].join(".") + "/api/v1/chat/completions";
+  var URL_GROQ = P + ["api","groq","com"].join(".") + "/openai/v1/chat/completions";
+  var URL_CERE = P + ["api","cerebras","ai"].join(".") + "/v1/chat/completions";
+  var URL_MIST = P + ["api","mistral","ai"].join(".") + "/v1/chat/completions";
+  var URL_SAMB = P + ["api","sambanova","ai"].join(".") + "/v1/chat/completions";
+  var URL_GITH = P + ["models","inference","ai","azure","com"].join(".") + "/chat/completions";
+
+  window.addEventListener('DOMContentLoaded', function() {
+    var authCard = document.getElementById('authCard');
+    if (authCard) {
+      var tabRow = document.createElement('div');
+      tabRow.style.cssText = 'display:flex; gap:8px; margin-bottom:14px;';
+      tabRow.innerHTML = '<button type="button" id="btnModeLogin" style="flex:1; background:#10b981;">🔐 Login</button>' +
+                         '<button type="button" id="btnModeSignup" style="flex:1; background:#1e293b; border:1px solid #334155;">🚀 Create Account</button>';
+      authCard.insertBefore(tabRow, authCard.children[2]);
+
+      document.getElementById('btnModeLogin').onclick = function() { setAuthMode(false); };
+      document.getElementById('btnModeSignup').onclick = function() { setAuthMode(true); };
+      var switchLink = document.getElementById('authSwitchLink');
+      if (switchLink) switchLink.onclick = function() { setAuthMode(!isSignup); };
     }
 
-    url.hostname = VERCEL_DOMAIN;
+    var loggedInUser = localStorage.getItem('satyexa_active_user');
+    if (loggedInUser) {
+      var users = JSON.parse(localStorage.getItem('satyexa_users_db') || '{}');
+      if (users[loggedInUser]) showWorkspace(loggedInUser, users[loggedInUser].name);
+    }
+    loadSavedKeys();
+    var pInput = document.getElementById('customPersonaInput');
+    if (pInput) pInput.value = localStorage.getItem('satyexa_persona') || '';
+  });
 
-    const modifiedHeaders = new Headers(request.headers);
-    modifiedHeaders.set("Host", VERCEL_DOMAIN);
-    modifiedHeaders.set("X-Forwarded-Host", originalHost);
-    modifiedHeaders.set("X-Forwarded-Proto", "https");
-    modifiedHeaders.set("X-Real-IP", request.headers.get("CF-Connecting-IP") || "");
+  function showAuthMsg(msg, isErr) {
+    var box = document.getElementById('authFeedback');
+    box.innerText = msg;
+    box.className = 'auth-msg ' + (isErr ? 'err' : 'ok');
+  }
 
-    const modifiedRequest = new Request(url.toString(), {
-      method: request.method,
-      headers: modifiedHeaders,
-      body: request.method !== "GET" && request.method !== "HEAD" ? request.body : null,
-      redirect: "manual",
+  function setAuthMode(signupMode) {
+    isSignup = signupMode;
+    document.getElementById('authFeedback').className = 'auth-msg';
+    document.getElementById('authTitle').innerText = isSignup ? '🚀 Create Satyexa Account' : '🔐 Login to Satyexa AI';
+    document.getElementById('authFullName').classList.toggle('hidden', !isSignup);
+    document.getElementById('authPassConfirm').classList.toggle('hidden', !isSignup);
+    document.getElementById('authSubmitBtn').innerText = isSignup ? 'Create Professional Account' : 'Login to Workspace';
+    document.getElementById('authSwitchText').innerText = isSignup ? 'Already registered?' : "Don't have an account?";
+    document.getElementById('authSwitchLink').innerText = isSignup ? 'Login Here' : 'Create Account';
+
+    var bLogin = document.getElementById('btnModeLogin');
+    var bSignup = document.getElementById('btnModeSignup');
+    if (bLogin && bSignup) {
+      bLogin.style.background = !isSignup ? '#10b981' : '#1e293b';
+      bSignup.style.background = isSignup ? '#10b981' : '#1e293b';
+    }
+  }
+
+  function toggleAuthMode() { setAuthMode(!isSignup); }
+
+  function handleAuth() {
+    var user = document.getElementById('authUser').value.trim().toLowerCase();
+    var pass = document.getElementById('authPass').value.trim();
+    var ageOk = document.getElementById('ageCheck').checked;
+    var users = JSON.parse(localStorage.getItem('satyexa_users_db') || '{}');
+
+    if (!user || !pass) return showAuthMsg('❌ Username and Password are required!', true);
+    if (!ageOk) return showAuthMsg('❌ Please check the 18+ age confirmation box.', true);
+
+    if (isSignup) {
+      var fullName = document.getElementById('authFullName').value.trim() || user;
+      var confirmPass = document.getElementById('authPassConfirm').value.trim();
+      if (pass.length < 4) return showAuthMsg('❌ Password must be at least 4 characters.', true);
+      if (pass !== confirmPass) return showAuthMsg('❌ Passwords do not match!', true);
+      if (users[user]) return showAuthMsg('❌ Username already exists! Switch to Login.', true);
+
+      users[user] = { name: fullName, pass: btoa(pass), created: new Date().toISOString() };
+      localStorage.setItem('satyexa_users_db', JSON.stringify(users));
+      showAuthMsg('✅ Account created! Opening workspace...', false);
+      setTimeout(function() {
+        localStorage.setItem('satyexa_active_user', user);
+        showWorkspace(user, fullName);
+      }, 600);
+    } else {
+      if (!users[user]) return showAuthMsg('❌ Account not found! Tap "🚀 Create Account" button above first.', true);
+      if (users[user].pass !== btoa(pass)) return showAuthMsg('❌ Incorrect password!', true);
+      localStorage.setItem('satyexa_active_user', user);
+      showWorkspace(user, users[user].name);
+    }
+  }
+
+  function showWorkspace(user, displayName) {
+    currentUser = user;
+    document.getElementById('authCard').classList.add('hidden');
+    document.getElementById('workspace').classList.remove('hidden');
+    document.getElementById('sidebarBtn').classList.remove('hidden');
+    document.getElementById('userControls').classList.remove('hidden');
+    document.getElementById('currentUserDisplay').innerText = displayName || user;
+    sessions = JSON.parse(localStorage.getItem('satyexa_sessions_' + user) || '[]');
+    if (sessions.length === 0) createNewSession();
+    else { activeSessionId = sessions[0].id; renderSessions(); renderMessages(); }
+  }
+        function logout() { localStorage.removeItem('satyexa_active_user'); location.reload(); }
+  function toggleSidebar() { document.getElementById('chatSidebar').classList.toggle('open'); document.getElementById('sidebarOverlay').classList.toggle('open'); }
+
+  function switchTab(tab) {
+    ['chat', 'image', 'brain', 'keys'].forEach(function(t) {
+      document.getElementById('panel' + t.charAt(0).toUpperCase() + t.slice(1)).classList.remove('active');
+      document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.remove('active');
     });
+    document.getElementById('panel' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+    document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+  }
 
-    try {
-      const isStaticAsset = /\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|webp)$/i.test(url.pathname);
+  function toggleWeb() { webSearch = !webSearch; var btn = document.getElementById('webBtn'); btn.innerText = webSearch ? '🌐 Web: ON' : '🌐 Web: OFF'; btn.classList.toggle('on', webSearch); }
+  function toggleDeepThink() { deepThink = !deepThink; var btn = document.getElementById('thinkBtn'); btn.innerText = deepThink ? '🧠 Think: ON' : '🧠 Think: OFF'; btn.classList.toggle('on', deepThink); }
+  function toggleSplitMode() {
+    splitMode = !splitMode; var btn = document.getElementById('splitBtn'); var splitBox = document.getElementById('messagesSplit');
+    btn.innerText = splitMode ? '◫ Split: ON' : '◫ Split: OFF'; btn.classList.toggle('on', splitMode); splitBox.classList.toggle('hidden', !splitMode);
+    if (splitMode) splitBox.innerHTML = '<div class="msg-wrap ai-wrap"><div class="engine-tag">SPLIT COMPARE ENGINE</div><div class="msg ai">Split View Ready! Send a prompt to compare dual AI answers side-by-side.</div></div>';
+  }
 
-      const response = await fetch(modifiedRequest, {
-        cf: isStaticAsset
-          ? { cacheEverything: true, cacheTtl: 86400 }
-          : { cacheTtl: 0 },
-      });
+  function savePersona() { localStorage.setItem('satyexa_persona', document.getElementById('customPersonaInput').value.trim()); alert('✅ Custom AI Brain Persona saved!'); }
 
-      const newResponseHeaders = new Headers(response.headers);
-      newResponseHeaders.set("Access-Control-Allow-Origin", "*");
-      newResponseHeaders.set("X-Powered-By", "Satyexa-Cloudflare-Edge");
+  function createNewSession() {
+    var id = Date.now().toString();
+    sessions.unshift({ id: id, title: 'Chat ' + (sessions.length + 1), messages: [{ role: 'ai', text: 'Assalamu Alaikum! Welcome to Satyexa AI v20.0 PYTHON APEX. Parallel Multi-Brain Fusion & Live Code Sandbox are online!', engine: 'PYTHON APEX' }] });
+    activeSessionId = id; saveSessions(); renderSessions(); renderMessages();
+  }
 
-      if (newResponseHeaders.has("Location")) {
-        let location = newResponseHeaders.get("Location");
-        location = location.replace(VERCEL_DOMAIN, originalHost);
-        newResponseHeaders.set("Location", location);
-      }
+  function saveSessions() { if (currentUser) localStorage.setItem('satyexa_sessions_' + currentUser, JSON.stringify(sessions)); }
 
-      return new Response(response.body, {
-        status: response.status,
-        statusText: response.statusText,
-        headers: newResponseHeaders,
-      });
+  function renderSessions() {
+    var list = document.getElementById('sessionList'); list.innerHTML = '';
+    sessions.forEach(function(s) {
+      var div = document.createElement('div');
+      div.className = 'session-item' + (s.id === activeSessionId ? ' active' : '');
+      div.innerHTML = '<span onclick="selectSession(\'' + s.id + '\')" style="flex:1;">💬 ' + s.title + '</span><span onclick="deleteSession(\'' + s.id + '\')" style="color:#f87171; padding-left:8px;">✕</span>';
+      list.appendChild(div);
+    });
+  }
 
-    } catch (error) {
-      return new Response(
-        JSON.stringify({
-          error: "Edge Gateway Timeout or Connection Error",
-          details: error.message,
-        }),
-        {
-          status: 502,
-          headers: {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
-          },
-        }
-      );
+  function selectSession(id) { activeSessionId = id; renderSessions(); renderMessages(); toggleSidebar(); }
+  function deleteSession(id) { sessions = sessions.filter(function(s) { return s.id !== id; }); if (sessions.length === 0) createNewSession(); else { activeSessionId = sessions[0].id; saveSessions(); renderSessions(); renderMessages(); } }
+
+  function renderMessages() {
+    var box = document.getElementById('messages'); box.innerHTML = '';
+    var session = sessions.find(function(s) { return s.id === activeSessionId; });
+    if (session) session.messages.forEach(function(m) { appendMessageUI(box, m.role, m.text, m.engine); });
+  }
+
+  function formatRichText(str) {
+    var safe = str.replace(/[&<>"']/g, function(m) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]; });
+    safe = safe.replace(/```([\s\S]*?)```/g, '<pre>$1</pre>');
+    safe = safe.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    return safe;
+  }
+
+  function appendMessageUI(container, role, text, engine) {
+    var wrap = document.createElement('div');
+    wrap.className = 'msg-wrap ' + (role === 'user' ? 'user-wrap' : 'ai-wrap');
+    var html = (role === 'ai' && engine) ? '<div class="engine-tag">' + engine + '</div>' : '';
+    html += '<div class="msg ' + role + '">' + formatRichText(text) + '</div>';
+    if (role === 'ai') {
+      var enc = encodeURIComponent(text);
+      var hasHtmlCode = text.indexOf('```html') !== -1 || text.indexOf('<!DOCTYPE html>') !== -1 || text.indexOf('<html') !== -1;
+      html += '<div class="msg-actions">' +
+              '<button class="mini-btn" onclick="copyText(this, \'' + enc + '\')">📋 Copy</button>' +
+              '<button class="mini-btn" onclick="speakText(\'' + enc + '\')">🔊 Listen</button>' +
+              (hasHtmlCode ? '<button class="mini-btn run-btn" onclick="runLiveCode(\'' + enc + '\')">▶ Run Live Preview</button>' : '') +
+              '</div>';
     }
-  },
-};
+    wrap.innerHTML = html; container.appendChild(wrap); container.scrollTop = container.scrollHeight;
+  }
+
+  function runLiveCode(encoded) {
+    var raw = decodeURIComponent(encoded);
+    var match = raw.match(/```html([\s\S]*?)```/) || raw.match(/```([\s\S]*?)```/);
+    document.getElementById('sandboxFrame').srcdoc = match ? match[1] : raw;
+    document.getElementById('sandboxModal').classList.remove('hidden');
+  }
+  function closeSandbox() { document.getElementById('sandboxModal').classList.add('hidden'); }
+  function copyText(btn, encoded) { navigator.clipboard.writeText(decodeURIComponent(encoded)); btn.innerText = '✅ Copied'; setTimeout(function() { btn.innerText = '📋 Copy'; }, 1500); }
+  function speakText(encoded) { window.speechSynthesis.cancel(); window.speechSynthesis.speak(new SpeechSynthesisUtterance(decodeURIComponent(encoded))); }
+
+  function exportCurrentChat() {
+    var session = sessions.find(function(s) { return s.id === activeSessionId; }); if (!session) return;
+    var content = session.messages.map(function(m) { return '[' + m.role.toUpperCase() + ']: ' + m.text; }).join('\n\n');
+    var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([content], { type: 'text/plain' })); a.download = session.title + '.txt'; a.click();
+  }
+
+  function handleImageUpload(e) {
+    var file = e.target.files[0]; if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function() { attachedImage = reader.result; document.getElementById('previewImg').src = attachedImage; document.getElementById('previewBox').classList.remove('hidden'); };
+    reader.readAsDataURL(file);
+  }
+  function removeImage() { attachedImage = null; document.getElementById('previewBox').classList.add('hidden'); }
+
+  function toggleVoice() {
+    var SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRec) return alert('Voice input not supported in this browser.');
+    var rec = new SpeechRec(); var btn = document.getElementById('micBtn'); btn.classList.add('recording');
+    rec.onresult = function(e) { document.getElementById('promptInput').value += e.results[0][0].transcript; btn.classList.remove('recording'); };
+    rec.onerror = function() { btn.classList.remove('recording'); }; rec.start();
+  }
+
+  function saveAllKeys() {
+    ['gemini','openrouter','groq','cerebras','mistral','sambanova','github'].forEach(function(k) { localStorage.setItem('key_' + k, document.getElementById('key_' + k).value.trim()); });
+    alert('✅ All Frontier AI Keys saved securely!');
+  }
+  function loadSavedKeys() {
+    ['gemini','openrouter','groq','cerebras','mistral','sambanova','github'].forEach(function(k) { var val = localStorage.getItem('key_' + k); if (val) document.getElementById('key_' + k).value = val; });
+  }
+
+  async function callExternalEngine(engine, text) {
+    var endpoints = {
+      'or-nemotron': { url: URL_OR, model: 'nvidia/nemotron-3-ultra-550b-a55b:free', key: localStorage.getItem('key_openrouter'), name: 'Nemotron 3 Ultra 550B' },
+      'or-gemma4': { url: URL_OR, model: 'google/gemma-4-31b-it:free', key: localStorage.getItem('key_openrouter'), name: 'Google Gemma 4 31B' },
+      'or-particle': { url: URL_OR, model: 'particle-ai/particle-1:free', key: localStorage.getItem('key_openrouter'), name: 'Particle-1 (DeepSeek V4.1)' },
+      'groq-gptoss': { url: URL_GROQ, model: 'openai/gpt-oss-120b', key: localStorage.getItem('key_groq'), name: 'Groq GPT-OSS 120B' },
+      'groq-llama': { url: URL_GROQ, model: 'llama-3.3-70b-versatile', key: localStorage.getItem('key_groq'), name: 'Groq Llama 3.3 70B' },
+      'cerebras': { url: URL_CERE, model: 'qwen-3-32b', key: localStorage.getItem('key_cerebras'), name: 'Cerebras Qwen 3' },
+      'mistral': { url: URL_MIST, model: 'mistral-small-latest', key: localStorage.getItem('key_mistral'), name: 'Mistral Small 4' },
+      'sambanova': { url: URL_SAMB, model: 'DeepSeek-V3-0324', key: localStorage.getItem('key_sambanova'), name: 'SambaNova DeepSeek V3' },
+      'github': { url: URL_GITH, model: 'gpt-4o', key: localStorage.getItem('key_github'), name: 'GitHub GPT-4o' }
+    };
+    var cfg = endpoints[engine];
+    if (!cfg || !cfg.key) throw new Error('Please add your free API key in ⚙ 15 Engines tab, or select APEX GOD-MODE / Gemini 4.');
+    var res = await fetch(cfg.url, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + cfg.key },
+      body: JSON.stringify({ model: cfg.model, messages: [{ role: 'user', content: text }] })
+    });
+    var data = await res.json();
+    if (!res.ok) throw new Error((data.error && data.error.message) || 'Engine API Error');
+    return { text: data.choices[0].message.content, name: cfg.name };
+  }
+
+  async function sendMessage() {
+    var input = document.getElementById('promptInput');
+    var text = input.value.trim();
+    var engine = document.getElementById('engineSelect').value;
+    if (!text && !attachedImage) return;
+
+      <script>
+  window.satyexaMultiFiles = [];
+  window.currentAudio = null;
+  let formatTimer = null;
+
+  function injectProAccountHelper() {
+    const authCard = document.getElementById('authCard');
+    if (!authCard || document.getElementById('proSuggestBtn')) return;
+
+    const helperBtn = document.createElement('button');
+    helperBtn.id = 'proSuggestBtn';
+    helperBtn.type = 'button';
+    helperBtn.innerHTML = '✨ Generate Pro Username & Strong Password';
+    helperBtn.style.cssText = 'width:100%; margin-top:8px; background:#1e293b; color:#38bdf8; border:1px dashed #38bdf8; padding:8px; border-radius:8px; font-size:12px; cursor:pointer;';
+    
+    helperBtn.onclick = () => {
+      const fullName = (document.getElementById('authFullName')?.value || 'user').trim().toLowerCase().replace(/\s+/g, '.');
+      const randNum = Math.floor(100 + Math.random() * 900);
+      const proUser = `${fullName}.${randNum}`;
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789@#$!';
+      let strongPass = 'Satyexa@';
+      for (let i = 0; i < 6; i++) strongPass += chars.charAt(Math.floor(Math.random() * chars.length));
+
+      const userInp = document.getElementById('authUser');
+      const passInp = document.getElementById('authPass');
+      const confInp = document.getElementById('authPassConfirm');
+      if (userInp) userInp.value = proUser;
+      if (passInp) { passInp.type = 'text'; passInp.value = strongPass; }
+      if (confInp) { confInp.type = 'text'; confInp.value = strongPass; }
+      alert(`✅ Pro Account Ready!\n\nUsername: ${proUser}\nStrong Password: ${strongPass}\n\n(Save this password safely before creating account)`);
+    };
+
+    const submitBtn = document.getElementById('authSubmitBtn');
+    if (submitBtn) submitBtn.parentNode.insertBefore(helperBtn, submitBtn);
+  }
+
+  function createProfileModal() {
+    if (document.getElementById('profileModal')) return;
+    const ns = atob("aHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmc=");
+    const defaultAvatar = `data:image/svg+xml;utf8,<svg xmlns='${ns}' viewBox='0 0 24 24' fill='%2338bdf8'><circle cx='12' cy='8' r='4'/><path d='M12 14c-4.42 0-8 1.79-8 4v2h16v-2c0-2.21-3.58-4-8-4z'/></svg>`;
+    const modal = document.createElement('div');
+    modal.id = 'profileModal';
+    modal.style.cssText = 'display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:3000; align-items:center; justify-content:center; padding:16px;';
+    modal.innerHTML = `
+      <div style="background:#0f172a; border:1px solid #334155; border-radius:16px; padding:20px; width:100%; max-width:360px; color:#f8fafc; text-align:center;">
+        <h3 style="margin:0 0 12px 0; color:#38bdf8;">👤 Satyexa User Profile</h3>
+        <img id="modalAvatarPreview" src="${defaultAvatar}" style="width:84px; height:84px; border-radius:50%; object-fit:cover; border:2px solid #10b981; margin-bottom:10px; background:#1e293b;">
+        <br>
+        <input type="file" id="avatarFileInput" accept="image/jpeg,image/png,image/webp" style="display:none;">
+        <button type="button" onclick="document.getElementById('avatarFileInput').click()" style="background:#1e293b; color:#38bdf8; border:1px solid #334155; padding:6px 14px; border-radius:8px; font-size:12px; cursor:pointer; margin-bottom:12px;">📷 Change Profile Picture</button>
+        <input type="text" id="editProfileName" placeholder="Your Full Name" style="width:100%; box-sizing:border-box; padding:10px; border-radius:8px; border:1px solid #334155; background:#020617; color:#fff; margin-bottom:10px;">
+        <textarea id="editProfileBio" rows="2" placeholder="Your Bio / Profession..." style="width:100%; box-sizing:border-box; padding:10px; border-radius:8px; border:1px solid #334155; background:#020617; color:#fff; margin-bottom:12px;"></textarea>
+        <div style="display:flex; gap:8px;">
+          <button type="button" onclick="saveUserProfile()" style="flex:1; background:#10b981; color:#fff; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer;">💾 Save Profile</button>
+          <button type="button" onclick="document.getElementById('profileModal').style.display='none'" style="flex:1; background:#334155; color:#fff; border:none; padding:10px; border-radius:8px; cursor:pointer;">Close</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    document.getElementById('avatarFileInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        document.getElementById('modalAvatarPreview').src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  window.openProfileModal = function() {
+    createProfileModal();
+    const u = localStorage.getItem('satyexa_active_user') || 'user';
+    const prof = JSON.parse(localStorage.getItem('satyexa_profile_' + u) || '{}');
+    const dispName = document.getElementById('currentUserDisplay')?.innerText || u;
+    document.getElementById('editProfileName').value = prof.name || dispName;
+    document.getElementById('editProfileBio').value = prof.bio || '';
+    if (prof.avatar) document.getElementById('modalAvatarPreview').src = prof.avatar;
+    document.getElementById('profileModal').style.display = 'flex';
+  };
+
+  window.saveUserProfile = function() {
+    const u = localStorage.getItem('satyexa_active_user') || 'user';
+    const name = document.getElementById('editProfileName').value.trim();
+    const bio = document.getElementById('editProfileBio').value.trim();
+    const avatar = document.getElementById('modalAvatarPreview').src;
+    localStorage.setItem('satyexa_profile_' + u, JSON.stringify({ name, bio, avatar }));
+    if (name) document.getElementById('currentUserDisplay').innerText = name;
+    if (avatar && document.getElementById('navAvatar')) document.getElementById('navAvatar').src = avatar;
+    document.getElementById('profileModal').style.display = 'none';
+    alert('✅ Profile Updated!');
+  };
+
+  function loadSavedProfile() {
+    const u = localStorage.getItem('satyexa_active_user');
+    if (!u) return;
+    const prof = JSON.parse(localStorage.getItem('satyexa_profile_' + u) || '{}');
+    if (prof.name && document.getElementById('currentUserDisplay')) {
+      document.getElementById('currentUserDisplay').innerText = prof.name;
+    }
+    if (prof.avatar && document.getElementById('navAvatar')) {
+      document.getElementById('navAvatar').src = prof.avatar;
+    }
+  }
+
+  const btnStyle = document.createElement('style');
+  btnStyle.textContent = '.mini-btn, .icon-btn, button { user-select: none; -webkit-user-select: none; }';
+  document.head.appendChild(btnStyle);
+
+  window.isSpeakingNow = false;
+  window.activeSpeakBtn = null;
+
+  function resetSpeakUI() {
+    window.isSpeakingNow = false;
+    if (window.activeSpeakBtn) {
+      window.activeSpeakBtn.innerHTML = '🔊 Listen';
+      window.activeSpeakBtn.style.background = '';
+      window.activeSpeakBtn.style.color = '';
+      window.activeSpeakBtn = null;
+    }
+  }
+
+  window.speakText = function(encoded) {
+    const clickedBtn = (typeof event !== 'undefined' && event.currentTarget) ? event.currentTarget : null;
+    const wasSameBtn = (window.isSpeakingNow && window.activeSpeakBtn === clickedBtn);
+
+    if (window.currentAudio) {
+      window.currentAudio.pause();
+      window.currentAudio = null;
+    }
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    resetSpeakUI();
+
+    if (wasSameBtn) return;
+
+    let raw = decodeURIComponent(encoded);
+    let clean = raw
+      .replace(/```[\s\S]*?```/g, ' Code block. ')
+      .replace(/[#*`$~_>]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!clean) return;
+
+    window.isSpeakingNow = true;
+    if (clickedBtn) {
+      window.activeSpeakBtn = clickedBtn;
+      clickedBtn.innerHTML = '⏹️ Stop';
+      clickedBtn.style.background = '#ef4444';
+      clickedBtn.style.color = '#ffffff';
+    }
+
+    let lang = 'en';
+    if (/[\u0980-\u09FF]/.test(clean)) lang = 'bn';
+    else if (/[\u0900-\u097F]/.test(clean)) lang = 'hi';
+    else if (/[\u0600-\u06FF]/.test(clean)) lang = 'ar';
+
+    setTimeout(() => {
+      const voices = ('speechSynthesis' in window) ? window.speechSynthesis.getVoices() : [];
+      const hasVoice = voices.some(v => v.lang.toLowerCase().startsWith(lang));
+
+      if (hasVoice && 'speechSynthesis' in window) {
+        window.speechSynthesis.resume();
+        const utter = new SpeechSynthesisUtterance(clean);
+        utter.lang = lang === 'bn' ? 'bn-BD' : (lang === 'hi' ? 'hi-IN' : (lang === 'ar' ? 'ar-SA' : 'en-US'));
+        utter.volume = 1.0;
+        utter.onend = resetSpeakUI;
+        utter.onerror = resetSpeakUI;
+        window.speechSynthesis.speak(utter);
+      } else {
+        const ttsBase = atob("aHR0cHM6Ly90cmFuc2xhdGUuZ29vZ2xlLmNvbS90cmFuc2xhdGVfdHRzP2llPVVURi04JmNsaWVudD10dy1vYiZ0bD0=");
+        const ttsUrl = ttsBase + lang + "&q=" + encodeURIComponent(clean.slice(0, 200));
+        window.currentAudio = new Audio(ttsUrl);
+        window.currentAudio.onended = resetSpeakUI;
+        window.currentAudio.onerror = resetSpeakUI;
+        window.currentAudio.play().catch(resetSpeakUI);
+      }
+    }, 100);
+  };
+  
+  ['galleryUpload', 'cameraUpload', 'imageUpload'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('change', async (e) => {
+      const files = Array.from(e.target.files || []);
+      if (!files.length) return;
+      window.satyexaMultiFiles = [];
+      for (const f of files) {
+        const dataUrl = await new Promise(res => {
+          const r = new FileReader();
+          r.onload = () => res(r.result);
+          r.readAsDataURL(f);
+        });
+        window.satyexaMultiFiles.push({ name: f.name, mimeType: f.type || 'image/jpeg', data: dataUrl });
+      }
+      <script>
+window.addEventListener('DOMContentLoaded', () => {
+  try {
+    const saved = JSON.parse(localStorage.getItem('satyexa_user_vault') || '{}');
+    if (saved.token) document.getElementById('sd-u-token').value = saved.token;
+    if (saved.extra1) document.getElementById('sd-u-extra1').value = saved.extra1;
+    if (saved.extra2) document.getElementById('sd-u-extra2').value = saved.extra2;
+  } catch(e) {}
+});
+
+function saveUserVault() {
+  const vault = {
+    token: document.getElementById('sd-u-token').value.trim(),
+    extra1: document.getElementById('sd-u-extra1').value.trim(),
+    extra2: document.getElementById('sd-u-extra2').value.trim()
+  };
+  localStorage.setItem('satyexa_user_vault', JSON.stringify(vault));
+  const status = document.getElementById('sd-status');
+  status.style.color = '#38bdf8';
+  status.innerText = '💾 Credentials saved safely in your browser!';
+}
+
+function toggleDeployModal(prefillCode) {
+  const m = document.getElementById('satyexa-deploy-modal');
+  if (typeof prefillCode === 'string') {
+    document.getElementById('sd-code').value = prefillCode;
+    m.style.display = 'block';
+    return;
+  }
+  m.style.display = m.style.display === 'none' ? 'block' : 'none';
+}
+
+function toggleSdFields() {
+  const mode = document.getElementById('sd-mode').value;
+  document.getElementById('sd-admin-box').style.display = mode === 'admin' ? 'block' : 'none';
+  document.getElementById('sd-user-box').style.display = mode === 'user' ? 'block' : 'none';
+}
+
+setInterval(() => {
+  document.querySelectorAll('button').forEach(btn => {
+    if (btn.innerText && btn.innerText.includes('Run Live Preview') && !btn.dataset.satyexaHooked) {
+      btn.dataset.satyexaHooked = 'true';
+      const autoBtn = document.createElement('button');
+      autoBtn.type = 'button';
+      autoBtn.innerText = '⚡ One-Click Deploy';
+      autoBtn.style.cssText = 'background:linear-gradient(135deg,#00f2fe,#4facfe);color:#000;border:none;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:bold;cursor:pointer;margin-left:6px;box-shadow:0 2px 8px rgba(0,242,254,0.3);';
+      
+      autoBtn.onclick = () => {
+        let container = btn.parentElement;
+        let codeText = '';
+        for (let i = 0; i < 5; i++) {
+          if (!container) break;
+          const pre = container.querySelector('pre, code');
+          if (pre && pre.innerText.trim().length > 5) {
+            codeText = pre.innerText;
+            break;
+          }
+          container = container.parentElement;
+        }
+        toggleDeployModal(codeText || '');
+      };
+      btn.parentElement.appendChild(autoBtn);
+    }
+  });
+}, 800);
+
+async function executeSatyexaDeploy() {
+  const btn = document.getElementById('sd-btn');
+  const status = document.getElementById('sd-status');
+  const mode = document.getElementById('sd-mode').value;
+  const rawPlatform = document.getElementById('sd-platform').value;
+  const path = document.getElementById('sd-filepath').value.trim();
+  const content = document.getElementById('sd-code').value;
+
+  if (!content) { status.innerText = '⚠️ Please enter or paste code first!'; return; }
+  btn.disabled = true; btn.innerText = '⏳ Deploying...'; status.innerText = '';
+
+  const token = document.getElementById('sd-u-token').value.trim();
+  const extra1 = document.getElementById('sd-u-extra1').value.trim();
+  const extra2 = document.getElementById('sd-u-extra2').value.trim();
+
+  const isInject = rawPlatform === 'github_inject';
+  const platform = isInject ? 'github' : rawPlatform;
+  const action = isInject ? 'smart_inject' : (platform === 'github' ? 'push_file' : (platform === 'vercel' ? 'deploy_vercel' : 'deploy_cf_worker'));
+
+  const payload = {
+    mode,
+    password: document.getElementById('sd-password').value,
+    platform,
+    action,
+    fileData: { path, content, projectName: extra2 || 'satyexa-app', workerName: extra2 || 'satyexa-worker' },
+    userConfig: {
+      ghToken: token, ghOwner: extra1, ghRepo: extra2,
+      vercelToken: token, cfToken: token, cfAccountId: extra1
+    },
+    customRequest: platform === 'universal' ? {
+      endpointUrl: extra1,
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      payload: content
+    } : null
+  };
+
+  try {
+    const res = await fetch('/api/deployer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.success) {
+      status.style.color = '#34d399';
+      status.innerText = '✅ ' + data.message + (data.liveUrl ? ' Live URL: ' + data.liveUrl : '');
+    } else {
+      status.style.color = '#f87171';
+      status.innerText = '❌ ' + (data.error || 'Deployment failed');
+    }
+  } catch (e) {
+    status.style.color = '#f87171';
+    status.innerText = '❌ Network Error: ' + e.message;
+  }
+  btn.disabled = false; btn.innerText = '🚀 Execute & Deploy';
+}
+</script>
+<!-- SATYEXA-MASTER-STUDIO-END -->
+  
+<!-- SATYEXA-STUDIO-START -->
+<style>
+  body { padding-bottom: 105px !important; }
+  footer, div[style*="Architecture"], .app-container, main { margin-bottom: 90px !important; padding-bottom: 30px !important; }
+  @media (max-width: 640px) {
+    #satyexa-deploy-fab, #satyexa-quick-fab, button[onclick*="Deploy"], button[onclick*="Quick"] {
+      bottom: 10px !important; padding: 7px 12px !important; font-size: 11px !important; z-index: 998 !important;
+    }
+    .split-container, [class*="split"] { flex-direction: column !important; }
+  }
+</style>
+
+<script>
+(function() {
+  window._openSatyexaTool = function(type) {
+    const closeSidebarBtn = Array.from(document.querySelectorAll('button, div, span')).find(el => 
+      (el.innerText || '').trim() === '✕' || (el.innerText || '').trim() === '×'
+    );
+    if (closeSidebarBtn) closeSidebarBtn.click();
+
+    setTimeout(() => {
+      if (type === 'deploy') {
+        const depBtn = document.querySelector('#satyexa-deploy-fab, button[onclick*="Deploy"]') || 
+          Array.from(document.querySelectorAll('button')).find(b => (b.innerText || '').includes('Deploy Studio'));
+        if (depBtn) depBtn.click();
+      } else if (type === 'calc') {
+        const quickBtn = document.querySelector('#satyexa-quick-fab, button[onclick*="Quick"]') || 
+          Array.from(document.querySelectorAll('button')).find(b => (b.innerText || '').includes('Quick Tools'));
+        if (quickBtn) quickBtn.click();
+      } else if (type === 'market') {
+        const marketEl = Array.from(document.querySelectorAll('button, div, a')).find(el => 
+          el.id !== 'satyexa-ws-market' && (el.innerText || '').includes('Market') && !el.closest('#satyexa-restored-workspace')
+        );
+        if (marketEl) {
+          marketEl.click();
+        } else {
+          const quickBtn = document.querySelector('#satyexa-quick-fab, button[onclick*="Quick"]') || 
+            Array.from(document.querySelectorAll('button')).find(b => (b.innerText || '').includes('Quick Tools'));
+          if (quickBtn) quickBtn.click();
+        }
+      }
+    }, 150);
+  };
+
+  function runSatyexaMasterFix() {
+    const allEls = Array.from(document.querySelectorAll('button, div, a'));
+    const exportEl = allEls.find(el => 
+      el.children.length <= 2 && (el.innerText || '').trim().includes('Export Chat')
+    );
+
+    if (exportEl) {
+      let wsDiv = document.getElementById('satyexa-restored-workspace');
+      if (!wsDiv) {
+        wsDiv = document.createElement('div');
+        wsDiv.id = 'satyexa-restored-workspace';
+        wsDiv.style.cssText = 'margin: 12px 0; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.12);';
+        exportEl.parentNode.insertBefore(wsDiv, exportEl.nextSibling);
+      }
+      if (!wsDiv.dataset.bound) {
+        wsDiv.dataset.bound = 'true';
+        wsDiv.innerHTML = `
+          <div style="font-size:11px; font-weight:700; color:#facc15; letter-spacing:0.5px; margin-bottom:8px;">⚡ SATYEXA PRO WORKSPACE</div>
+          <div id="satyexa-ws-market" onclick="window._openSatyexaTool('market')" style="padding:10px 12px; margin-bottom:8px; border-radius:8px; background:linear-gradient(90deg,#0d9488,#059669); color:#fff; font-weight:600; font-size:13px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+            <span>📈 AI Market & Auto-Trader</span><span style="font-size:10px; background:rgba(0,0,0,0.25); padding:2px 6px; border-radius:4px;">LIVE</span>
+          </div>
+          <div id="satyexa-ws-deploy" onclick="window._openSatyexaTool('deploy')" style="padding:10px 12px; margin-bottom:8px; border-radius:8px; background:linear-gradient(90deg,#0284c7,#0d9488); color:#fff; font-weight:600; font-size:13px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+            <span>🚀 Universal Deploy Studio</span><span style="font-size:10px; background:rgba(0,0,0,0.25); padding:2px 6px; border-radius:4px;">API</span>
+          </div>
+          <div id="satyexa-ws-calc" onclick="window._openSatyexaTool('calc')" style="padding:10px 12px; margin-bottom:8px; border-radius:8px; background:linear-gradient(90deg,#0284c7,#2563eb); color:#fff; font-weight:600; font-size:13px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+            <span>🛠️ Quick Calc & Notes</span><span style="font-size:10px; background:rgba(0,0,0,0.25); padding:2px 6px; border-radius:4px;">TOOL</span>
+          </div>
+        `;
+      }
+    }
+
+    const codeBox = Array.from(document.querySelectorAll('textarea')).find(t => 
+      (t.placeholder || '').toLowerCase().includes('generated code') || 
+      (t.placeholder || '').toLowerCase().includes('paste manually')
+    );
+    if (codeBox) {
+      const selects = Array.from(document.querySelectorAll('select'));
+      const actionSelect = selects.find(s => Array.from(s.options).some(o => o.text.includes('Smart Auto-Inject')));
+      
+      if (actionSelect) {
+  
