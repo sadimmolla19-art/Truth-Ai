@@ -899,6 +899,43 @@ setInterval(function() {
   }
 }, 600);
 </script>
+<script>
+// Force-sync Admin Mode (Password Only) & User Mode (Tokens) + Close (X) Fix
+setInterval(function() {
+  var modal = document.getElementById('satyexa-deploy-modal');
+  var modeEl = document.getElementById('sd-mode');
+  if (!modal || !modeEl) return;
+
+  // 1. Ensure Close (X) button always works
+  var closeBtn = modal.querySelector('button');
+  if (closeBtn && !closeBtn.dataset.xFixed) {
+    closeBtn.dataset.xFixed = 'true';
+    closeBtn.onclick = function() { modal.style.display = 'none'; };
+  }
+
+  // 2. Ensure Admin Password box exists right below Access Mode
+  var adminBox = document.getElementById('sd-admin-box');
+  if (!adminBox) {
+    adminBox = document.createElement('div');
+    adminBox.id = 'sd-admin-box';
+    adminBox.innerHTML = '<input id="sd-password" type="password" placeholder="Enter Admin Password..." style="width:100%;box-sizing:border-box;padding:9px;margin-bottom:10px;background:#1f2937;color:#fff;border:1px solid #38bdf8;border-radius:8px;">';
+    modeEl.parentNode.insertBefore(adminBox, modeEl.nextSibling);
+  }
+
+  // 3. Toggle visibility based on Admin vs User Mode
+  var isAdmin = (modeEl.value === 'admin');
+  adminBox.style.display = isAdmin ? 'block' : 'none';
+
+  var userBox = document.getElementById('sd-user-box');
+  if (userBox) userBox.style.display = isAdmin ? 'none' : 'block';
+
+  // Also hide standalone token/repo inputs if userBox wrapper was missing
+  ['sd-u-token', 'sd-u-extra1', 'sd-u-extra2'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = isAdmin ? 'none' : 'block';
+  });
+}, 300);
+</script>
   
 </body>
 </html>
