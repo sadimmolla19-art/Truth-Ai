@@ -849,6 +849,56 @@ setInterval(function() {
   }
 }, 500);
   </script>
+  <!-- SATYEXA HEADLESS BROWSER AUTOMATION UI -->
+<div id="satyexa-headless-modal" style="display:none;position:fixed;inset:0;z-index:100000;background:rgba(2,6,23,0.92);padding:16px;overflow-y:auto;font-family:sans-serif;color:#f8fafc;">
+  <div style="max-width:480px;margin:20px auto;background:#0f172a;border:1px solid #38bdf8;border-radius:14px;padding:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1e293b;padding-bottom:10px;margin-bottom:12px;">
+      <h3 style="margin:0;font-size:17px;color:#38bdf8;">🌐 Headless Browser Auto-Creator</h3>
+      <button onclick="document.getElementById('satyexa-headless-modal').style.display='none'" style="background:#ef4444;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-weight:bold;cursor:pointer;">✕</button>
+    </div>
+    <input id="stx-hl-url" placeholder="Target Signup URL (e.g. https://example.com)" style="width:100%;padding:10px;margin-bottom:8px;border-radius:8px;background:#1e293b;color:#fff;border:1px solid #334155;box-sizing:border-box;">
+    <input id="stx-hl-email" placeholder="Email / Username for Registration" style="width:100%;padding:10px;margin-bottom:8px;border-radius:8px;background:#1e293b;color:#fff;border:1px solid #334155;box-sizing:border-box;">
+    <input id="stx-hl-pass" type="text" placeholder="Password (Auto-generated if empty)" style="width:100%;padding:10px;margin-bottom:10px;border-radius:8px;background:#1e293b;color:#fff;border:1px solid #334155;box-sizing:border-box;">
+    <button onclick="window._runHeadlessBrowser()" id="stx-hl-btn" style="width:100%;padding:11px;border-radius:8px;border:none;background:linear-gradient(90deg,#0284c7,#10b981);color:#fff;font-weight:bold;font-size:14px;cursor:pointer;">🚀 Launch Headless Browser & Register</button>
+    <div id="stx-hl-out" style="margin-top:12px;padding:12px;border-radius:8px;background:#020617;border:1px solid #1e293b;font-size:12.5px;color:#e2e8f0;white-space:pre-wrap;min-height:70px;">Headless Engine Ready...</div>
+  </div>
+</div>
+
+<script>
+window._runHeadlessBrowser = async function() {
+  const url = document.getElementById('stx-hl-url').value.trim();
+  const email = document.getElementById('stx-hl-email').value.trim();
+  const pass = document.getElementById('stx-hl-pass').value.trim() || ('Satyexa@' + Math.random().toString(36).slice(-6).toUpperCase() + '9');
+  const out = document.getElementById('stx-hl-out');
+  const btn = document.getElementById('stx-hl-btn');
+  if (!url || !email) { out.innerText = '⚠️ Please enter Target URL and Email!'; return; }
+
+  btn.disabled = true; btn.innerText = '⏳ Running Headless Browser...';
+  out.innerText = '🌐 Launching Headless Chromium & filling form fields...';
+  try {
+    const res = await fetch('/api/headless', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'auto_signup', url, email, password: pass })
+    });
+    const data = await res.json();
+    out.innerText = data.success
+      ? `✅ Success!\nURL: ${url}\nEmail: ${email}\nPassword: ${pass}\nLog: ${data.message}`
+      : `⚠️ Backend Notice: ${data.error || 'Ensure /api/headless worker is connected.'}\n\nGenerated Credentials:\nEmail: ${email}\nPassword: ${pass}`;
+  } catch (e) {
+    out.innerText = `⚠️ API Endpoint (/api/headless) not found on server.\n\nReady Credentials:\nEmail: ${email}\nPassword: ${pass}`;
+  }
+  btn.disabled = false; btn.innerText = '🚀 Launch Headless Browser & Register';
+};
+
+setInterval(function() {
+  const ws = document.getElementById('satyexa-restored-workspace');
+  if (ws && !document.getElementById('satyexa-ws-headless')) {
+    ws.insertAdjacentHTML('beforeend',
+      '<div id="satyexa-ws-headless" onclick="toggleSidebar();document.getElementById(\'satyexa-headless-modal\').style.display=\'block\'" style="padding:9px 11px;margin-bottom:6px;border-radius:8px;background:linear-gradient(90deg,#0369a1,#0284c7);color:#fff;font-size:12.5px;font-weight:bold;cursor:pointer;display:flex;justify-content:space-between;"><span>🌐 Headless Browser Bot</span><span style="font-size:10px;background:rgba(0,0,0,0.3);padding:2px 6px;border-radius:4px;">BOT</span></div>'
+    );
+  }
+}, 600);
+</script>
   
 </body>
 </html>
