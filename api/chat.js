@@ -397,8 +397,9 @@ async function callGemini(userText, modelName, useSearchTool = false) {
   const rawFile = body.fileData || incomingImage;
   if (rawFile && typeof rawFile === 'string') {
     if (rawFile.startsWith('data:')) {
-      const mimeType = rawFile.split(';').replace('data:', '') || body.mimeType || 'image/jpeg';
-      const base64Data = rawFile.split(',');
+          const mimeType = rawFile.split(';').at(0).replace('data:', '') || body.mimeType || 'image/jpeg';
+    const base64Data = rawFile.split(',').at(1);
+      
       parts.push({ inlineData: { mimeType, data: base64Data } });
     } else {
       parts.push({ inlineData: { mimeType: body.mimeType || 'image/jpeg', data: rawFile } });
