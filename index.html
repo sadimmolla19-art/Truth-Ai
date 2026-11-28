@@ -1266,76 +1266,181 @@ setInterval(function() {
   injectCharacterButton();
   setInterval(injectCharacterButton, 1000);
 
-  const originalFetch = window.fetch;
-  window.fetch = async function(resource, config) {
-    if (typeof resource === 'string' && resource.includes('/api/chat') && config && config.body) {
-      try {
-        const parsedBody = JSON.parse(config.body);
-        parsedBody.truthMode = window.satyexaTruthMode;
-        config.body = JSON.stringify(parsedBody);
-      } catch (e) {}
+  // 1. Deploy Studio Syntax Error Fix
+  try {
+    const res = await fetch('/api/deployer', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.success) {
+      status.style.color = '#34d399';
+      status.innerText = '✅ ' + data.message + (data.liveUrl ? ' Live URL: ' + data.liveUrl : '');
+    } else {
+      status.style.color = '#f87171';
+      status.innerText = '❌ ' + (data.error || 'Deployment failed');
     }
-    return originalFetch.apply(this, arguments);
-  };
-})();
+  } catch (e) { 
+    status.style.color = '#f87171'; 
+    status.innerText = '❌ Network Error: ' + e.message; 
+  }
+  btn.disabled = false; 
+  btn.innerText = '🚀 Execute & Deploy';
+}
 </script>
-  <!-- SATYEXA AUTO-ACCOUNT VAULT (GMAIL PRESET) & VISION BRIDGE -->
+
+<!-- 2. UNIFIED VISION, PDF, VIDEO, IMAGE STUDIO & HEADLESS BROWSER PATCH -->
 <script>
 (function() {
-  // 1. Add Auto-Account Vault Button to Top Bar
-  function injectVaultBtn() {
-    const webBtn = Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes('Web:'));
-    if (webBtn && !document.getElementById('autoVaultBtn')) {
-      const btn = document.createElement('button');
-      btn.id = 'autoVaultBtn';
-      btn.type = 'button';
-      btn.style.cssText = 'background:#064e3b; color:#6ee7b7; border:1px solid #10b981; padding:4px 9px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; margin-right:6px;';
-      btn.innerText = '🤖 Vault';
-      btn.onclick = function() {
-        const savedEmail = localStorage.getItem('satyexa_vault_email') || '';
-        const savedPass = localStorage.getItem('satyexa_vault_pass') || 'Satyexa@2026!';
-        const savedName = localStorage.getItem('satyexa_vault_name') || 'Sadim Molla';
+  window.attachedFilePayload = null;
 
-        const newEmail = prompt('Enter Default Gmail for Auto-Account Creation:', savedEmail);
-        if (newEmail === null) return;
-        const newName = prompt('Enter Full Name for Forms:', savedName);
-        if (newName === null) return;
-        const newPass = prompt('Enter Default Password for New Accounts:', savedPass);
-        if (newPass === null) return;
+  // A. Fix File Upload (Supports Image, PDF, Video, Text/Code)
+  window.handleImageUpload = function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
 
-        localStorage.setItem('satyexa_vault_email', newEmail.trim());
-        localStorage.setItem('satyexa_vault_name', newName.trim());
-        localStorage.setItem('satyexa_vault_pass', newPass.trim());
-        alert('✅ Auto-Account Vault Saved!\nGmail: ' + newEmail + '\nNow just send any website link in chat to auto-create an account!');
-      };
-      webBtn.parentNode.insertBefore(btn, webBtn);
+    // Vercel 4.5MB limit check
+    if (file.size > 4.2 * 1024 * 1024) {
+      alert('⚠️ ফাইল সাইজ ৪ MB-এর বেশি! দয়া করে ছোট ফাইল আপলোড করুন।');
+      e.target.value = '';
+      return;
     }
-  }
-  injectVaultBtn();
-  setInterval(injectVaultBtn, 1000);
 
-  // 2. Automatically inject saved Gmail/Password & attached image into /api/chat requests
-  const origFetch = window.fetch;
+    const reader = new FileReader();
+    reader.onload = function() {
+      const base64Result = reader.result;
+      window.attachedImage = base64Result;
+      window.attachedFilePayload = {
+        data: base64Result,
+        name: file.name,
+        type: file.type || 'application/octet-stream'
+      };
+
+      const previewBox = document.getElementById('previewBox');
+      const previewImg = document.getElementById('previewImg');
+      const labelSpan = previewBox.querySelector('span');
+
+      if (file.type.startsWith('image/')) {
+        previewImg.src = base64Result;
+        previewImg.style.display = 'block';
+        if (labelSpan) labelSpan.innerText = '🖼️ Image attached: ' + file.name;
+      } else {
+        previewImg.style.display = 'none';
+        if (labelSpan) labelSpan.innerText = '📎 File attached (' + file.name + ') - Ready to analyze!';
+      }
+      previewBox.classList.remove('hidden');
+    };
+    reader.readAsDataURL(file);
+    e.target.value = ''; // Reset input so same file can be re-uploaded
+  };
+
+  const origRemove = window.removeImage;
+  window.removeImage = function() {
+    window.attachedFilePayload = null;
+    if (origRemove) origRemove();
+  };
+
+  // B. Fix 8K Image Studio (Reliable Generation + Fallback)
+  window.generateArt = function() {
+    const promptEl = document.getElementById('imgPrompt');
+    const prompt = promptEl ? promptEl.value.trim() : '';
+    if (!prompt) {
+      alert('⚠️ দয়া করে ছবির বর্ণনা (Prompt) লিখুন!');
+      if (promptEl) promptEl.focus();
+      return;
+    }
+    const resDiv = document.getElementById('imageResult');
+    const seed = Math.floor(Math.random() * 999999);
+    const url = 'https://pollinations.ai' + encodeURIComponent(prompt) + '?width=1024&height=1024&seed=' + seed + '&nologo=true&model=flux';
+
+    resDiv.innerHTML = '<p class="small" style="color:#38bdf8;">⏳ 8K Ultra HD আর্টওয়ার্ক তৈরি হচ্ছে, অনুগ্রহ করে ৫-১০ সেকেন্ড অপেক্ষা করুন...</p>';
+
+    const img = new Image();
+    img.onload = function() {
+      resDiv.innerHTML = '';
+      resDiv.appendChild(img);
+      resDiv.insertAdjacentHTML('beforeend',
+        '<a href="' + url + '" download="satyexa-8k-art.jpg" target="_blank">' +
+        '<button class="btn-full" style="margin-top:10px;">⬇ Download 8K HD Image</button></a>'
+      );
+    };
+    img.onerror = function() {
+      resDiv.innerHTML = '<p class="small" style="color:#f87171;">⚠️ ইমেজ সার্ভার ব্যস্ত আছে। আবার চেষ্টা করুন।</p>';
+    };
+    img.src = url;
+  };
+
+  // C. Fix Headless Browser Modal -> Route directly to /api/chat Headless Agent
+  window._runHeadlessBrowser = async function() {
+    const url = document.getElementById('stx-hl-url').value.trim();
+    const email = document.getElementById('stx-hl-email').value.trim();
+    const pass = document.getElementById('stx-hl-pass').value.trim() || ('Satyexa@' + Math.random().toString(36).slice(-6).toUpperCase() + '9');
+    const out = document.getElementById('stx-hl-out');
+    const btn = document.getElementById('stx-hl-btn');
+
+    if (!url) { out.innerText = '⚠️ অনুগ্রহ করে ওয়েবসাইটের URL দিন!'; return; }
+
+    btn.disabled = true;
+    btn.innerText = '⏳ Running Headless Chrome...';
+    out.innerText = '🌐 Headless Chrome চালু হচ্ছে এবং ওয়েবসাইটে প্রবেশ করছে...';
+
+    try {
+      const commandText = email
+        ? `Open website ${url} in headless browser, create account and fill-up signup form using email: ${email} and password: ${pass}, and capture screenshot.`
+        : `Open website ${url} in headless browser, read data and capture screenshot.`;
+
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [{ role: 'user', text: commandText }],
+          webSearch: true,
+          vaultEmail: email,
+          vaultPass: pass,
+          model: 'gemini-4-neon'
+        })
+      });
+      const data = await res.json();
+      out.innerText = data.reply || data.error || '✅ Execution completed.';
+    } catch (e) {
+      out.innerText = '❌ Error: ' + e.message;
+    }
+    btn.disabled = false;
+    btn.innerText = '🚀 Launch Headless Browser & Register';
+  };
+
+  // D. Intercept /api/chat to attach File/PDF/Video + TruthMode + Vault
+  const masterFetch = window.fetch;
   window.fetch = async function(resource, config) {
     if (typeof resource === 'string' && resource.includes('/api/chat') && config && config.body) {
       try {
         const bodyObj = JSON.parse(config.body);
+
+        // Attach fileData (PDF, Video, Image) properly
+        if (window.attachedFilePayload) {
+          bodyObj.imageBase64 = window.attachedFilePayload.data;
+          bodyObj.fileData = window.attachedFilePayload.data;
+          bodyObj.fileName = window.attachedFilePayload.name;
+          bodyObj.mimeType = window.attachedFilePayload.type;
+        }
+
+        // Auto-enable Web Search if URL or browser action is detected
+        const lastText = (bodyObj.messages && bodyObj.messages.length) ? (bodyObj.messages[bodyObj.messages.length - 1].text || '') : '';
+        if (/http|www\.|\.com|\.net|\.org|screenshot|website|account|signup|register|headless/i.test(lastText)) {
+          bodyObj.webSearch = true;
+        }
+
+        bodyObj.truthMode = !!window.satyexaTruthMode;
         bodyObj.vaultEmail = localStorage.getItem('satyexa_vault_email') || '';
         bodyObj.vaultName = localStorage.getItem('satyexa_vault_name') || 'Sadim Molla';
         bodyObj.vaultPass = localStorage.getItem('satyexa_vault_pass') || 'Satyexa@2026!';
 
-        // Ensure attached preview image is always passed to backend for Vision
-        const previewImg = document.querySelector('#imagePreview img, .preview-img, img[src^="data:image"]');
-        if (!bodyObj.image && previewImg && previewImg.src && previewImg.src.startsWith('data:image')) {
-          bodyObj.image = previewImg.src;
-        }
         config.body = JSON.stringify(bodyObj);
-      } catch (e) {}
+      } catch (err) {}
     }
-    return origFetch.apply(this, arguments);
+    return masterFetch.apply(this, arguments);
   };
 })();
 </script>
-  
 </body>
 </html>
+
