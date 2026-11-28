@@ -384,18 +384,27 @@ COMPARISON OUTPUT FORMAT:
 
 You are TRUTH-AI.
 Be decisive, analytical, confident and honest.`;
+
+if (headlessReport) {
+  systemPrompt = `CRITICAL SYSTEM OVERRIDE: You ARE a live Headless Chrome Browser Agent. Present the exact execution report and screenshot URL below to the user clearly in their language:\n${headlessReport}\n\n` + systemPrompt;
+}
+
+async function callGemini(userText, modelName, useSearchTool = false) {
+  if (!GEMINI_KEY) throw new Error('No Gemini Key');
+  const url = `${GEMINI_ROOT}/${modelName}:generateContent?key=${GEMINI_KEY}`;
+
+  const parts = [{ text: `${systemPrompt}\n${liveMarketFeed}\n${headlessReport}\nUser: ${userText}` }];
+  const rawFile = body.fileData || incomingImage;
+  if (rawFile && typeof rawFile === 'string') {
+    if (rawFile.startsWith('data:')) {
+      const mimeType = rawFile.split(';').replace('data:', '') || body.mimeType || 'image/jpeg';
+      const base64Data = rawFile.split(',');
+      parts.push({ inlineData: { mimeType, data: base64Data } });
+    } else {
+      parts.push({ inlineData: { mimeType: body.mimeType || 'image/jpeg', data: rawFile } });
     }
-        async function callGemini(userText, modelName, useSearchTool = false) {
-      if (!GEMINI_KEY) throw new Error('No Gemini Key');
-      const url = `${GEMINI_ROOT}/${modelName}:generateContent?key=${GEMINI_KEY}`;
-
-      const parts = [{ text: `${systemPrompt}\n${liveMarketFeed}${headlessReport}\nUser: ${userText}` }];
-      if (incomingImage && typeof incomingImage === 'string' && incomingImage.includes(',')) {
-        const mimeType = incomingImage.split(';').at(0).replace('data:', '') || 'image/jpeg';
-        const base64Data = incomingImage.split(',').at(1);
-        parts.push({ inlineData: { mimeType, data: base64Data } });
-      }
-
+  }
+  
       const payload = { contents: [{ parts }] };
       if (useSearchTool && !incomingImage) {
         payload.tools = [{ googleSearch: {} }];
@@ -461,13 +470,14 @@ Be decisive, analytical, confident and honest.`;
     }
 
     const fallbackChain = [];
-    if (incomingImage) {
-      fallbackChain.push(
-        () => callGemini(prompt, 'gemini-2.5-pro', false),
-        () => callGemini(prompt, 'gemini-2.5-flash', false),
-        () => callGemini(prompt, 'gemini-flash-latest', false)
-      );
-    } else if (isTruthMode) {
+    if (incomingImage || body.fileData) {
+  fallbackChain.push(
+    () => callGemini(prompt, 'gemini-2.5-flash', false),
+    () => callGemini(prompt, 'gemini-2.5-pro', false),
+    () => callGemini(prompt, 'gemini-flash-latest', false)
+  );
+} else if (isTruthMode) {
+      
       fallbackChain.push(
         () => callOpenRouter(prompt, 'deepseek/deepseek-r1:free'),
         () => callOpenRouter(prompt, 'openrouter/auto'),
