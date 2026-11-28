@@ -1444,6 +1444,71 @@ setInterval(function() {
       };
       const previewBox = document.getElementById('previewBox');
       const previewImg = document.getElementById('previewImg');
+  <script>
+(function() {
+  // Fix Execute & Deploy Button inside Deploy Studio Modal
+  const deployBtn = Array.from(document.querySelectorAll('button')).find(b => b.innerText && b.innerText.includes('Execute & Deploy'));
+  if (deployBtn) {
+    deployBtn.onclick = async function() {
+      const modal = deployBtn.closest('div');
+      const selects = modal.querySelectorAll('select');
+      const inputs = modal.querySelectorAll('input');
+      const textareas = modal.querySelectorAll('textarea');
+
+      const modeVal = selects.value && selects.value.includes('admin') ? 'admin' : 'user';
+      const passVal = inputs ? inputs.value.trim() : '';
+      const actionSelect = selects ? selects.value : 'smart_inject';
+      const filePathVal = inputs ? inputs.value.trim() : 'index.html';
+      const instructionVal = textareas ? textareas.value.trim() : '';
+      const codeVal = textareas ? textareas.value.trim() : '';
+
+      let actionMap = 'smart_inject';
+      if (actionSelect.includes('patch') || actionSelect.includes('ai')) actionMap = 'ai_edit';
+      else if (actionSelect.includes('full') || actionSelect.includes('overwrite')) actionMap = 'full_file';
+
+      let statusEl = document.getElementById('stx-deploy-live-status');
+      if (!statusEl) {
+        statusEl = document.createElement('p');
+        statusEl.id = 'stx-deploy-live-status';
+        statusEl.style.cssText = 'margin-top:10px; font-size:12.5px; font-weight:bold; text-align:center;';
+        deployBtn.parentNode.appendChild(statusEl);
+      }
+
+      deployBtn.disabled = true;
+      deployBtn.innerText = '⏳ Deploying to GitHub...';
+      statusEl.style.color = '#38bdf8';
+      statusEl.innerText = '⏳ সার্ভারের সাথে সংযোগ হচ্ছে...';
+
+      try {
+        const res = await fetch('/api/deployer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            mode: modeVal,
+            password: passVal,
+            platform: 'github',
+            action: actionMap,
+            fileData: { path: filePathVal || 'index.html', instruction: instructionVal, content: codeVal }
+          })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          statusEl.style.color = '#34d399';
+          statusEl.innerText = '✅ ' + data.message;
+        } else {
+          statusEl.style.color = '#f87171';
+          statusEl.innerText = '❌ ' + (data.error || 'Deployment failed');
+        }
+      } catch (err) {
+        statusEl.style.color = '#f87171';
+        statusEl.innerText = '❌ Error: ' + err.message;
+      }
+      deployBtn.disabled = false;
+      deployBtn.innerText = '🚀 Execute & Deploy';
+    };
+  }
+})();
+</script>
   
 </body>
 </html>
