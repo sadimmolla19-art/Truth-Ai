@@ -1232,170 +1232,216 @@ setInterval(function() {
   }, 500);
 })();
     </script>
-export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  <!-- SATYEXA UNIFIED ENGINE: LIVE RUN (PYTHON/WEB), COPY CODE, CHARACTER, VAULT, VISION, 8K STUDIO & HEADLESS AGENT -->
+<script>
+(function() {
+  window.satyexaTruthMode = false;
+  window.attachedFilePayload = null;
+  let isSpeaking = false;
+  let activeSpeakBtn = null;
+  let pyodideReadyPromise = null;
 
-  try {
-    const { mode, password, platform, action, fileData, userConfig, customRequest } = req.body;
-
-    // 1. Admin Mode Security Check
-    if (mode === 'admin') {
-      const adminPass = process.env.ADMIN_DEPLOY_PASSWORD || 'sadim19';
-      if (password !== adminPass) {
-        return res.status(401).json({ error: '❌ Invalid Admin Password!' });
+  // 1. Voice Listen ON/OFF Toggle Logic
+  window.speakText = function(encoded, btnEl) {
+    if (!('speechSynthesis' in window)) return alert('Text-to-Speech is not supported in this browser.');
+    if (isSpeaking || window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+      isSpeaking = false;
+      if (activeSpeakBtn) activeSpeakBtn.innerText = '🔊 Listen';
+      if (btnEl && btnEl === activeSpeakBtn) {
+        activeSpeakBtn = null;
+        return;
       }
     }
+    let clean = decodeURIComponent(encoded)
+      .replace(/```[\s\S]*?```/g, ' Code snippet. ')
+      .replace(/[#*`$~_>]/g, '')
+      .trim();
+    if (!clean) return;
 
-    const ghToken = mode === 'admin' ? process.env.GITHUB_TOKEN : userConfig?.ghToken;
-    const ghOwner = mode === 'admin' ? (process.env.GITHUB_OWNER || 'sadimmolla19-art') : userConfig?.ghOwner;
-    const ghRepo = mode === 'admin' ? (process.env.GITHUB_REPO || 'Truth-Ai') : userConfig?.ghRepo;
-    const geminiKey = process.env.GEMINI_API_KEY;
-
-    // 2. GITHUB OPERATIONS (Safe Patch, Smart Inject, Full File)
-    if (platform === 'github') {
-      if (!ghToken || !ghOwner || !ghRepo) {
-        return res.status(400).json({ error: 'Missing GitHub Token, Owner, or Repo!' });
+    const utter = new SpeechSynthesisUtterance(clean);
+    utter.lang = /[\u0980-\u09FF]/.test(clean) ? 'bn-BD' : 'en-US';
+    utter.onstart = function() {
+      isSpeaking = true;
+      if (btnEl) {
+        activeSpeakBtn = btnEl;
+        btnEl.innerText = '⏹ Stop Audio';
       }
+    };
+    utter.onend = utter.onerror = function() {
+      isSpeaking = false;
+      if (activeSpeakBtn) activeSpeakBtn.innerText = '🔊 Listen';
+      activeSpeakBtn = null;
+    };
+    window.speechSynthesis.speak(utter);
+  };
 
-      const filePath = fileData.path || 'index.html';
-      const apiUrl = `https://github.com{ghOwner}/${ghRepo}/contents/${filePath}`;
-      const headers = {
-        Authorization: `Bearer ${ghToken}`,
-        Accept: 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json'
-      };
+  // 2. Copy Code Only Function
+  window.copyOnlyCode = function(btn, encodedCode) {
+    const code = decodeURIComponent(encodedCode);
+    navigator.clipboard.writeText(code);
+    const oldText = btn.innerText;
+    btn.innerText = '✅ Code Copied';
+    setTimeout(() => { btn.innerText = oldText; }, 1600);
+  };
 
-      // Fetch existing file first
-      let existingContent = '';
-      let fileSha = null;
-      const getRes = await fetch(apiUrl, { headers });
-      if (getRes.ok) {
-        const getData = await getRes.json();
-        fileSha = getData.sha;
-        existingContent = Buffer.from(getData.content, 'base64').toString('utf-8');
-      }
+  // 3. Universal Live Run Engine (HTML/CSS/JS + Python in Browser)
+  window.executeUniversalLiveRun = async function(encodedCode, langHint) {
+    const rawCode = decodeURIComponent(encodedCode).trim();
+    const modal = document.getElementById('sandboxModal');
+    const frame = document.getElementById('sandboxFrame');
+    if (!modal || !frame) return;
 
-      let finalContent = fileData.content || '';
+    modal.classList.remove('hidden');
 
-      // A. SAFE AI SMART-PATCH (Search & Replace - Never deletes whole file!)
-      if (action === 'ai_edit') {
-        if (!existingContent) return res.status(404).json({ error: 'Target file not found on GitHub!' });
-        if (!geminiKey) return res.status(400).json({ error: 'GEMINI_API_KEY missing on server!' });
+    const isPython = langHint === 'python' ||
+      (!rawCode.includes('<html') && !rawCode.includes('<!DOCTYPE') && !rawCode.includes('<div') &&
+      (rawCode.includes('print(') || rawCode.includes('def ') || rawCode.includes('import ') || rawCode.includes('input(')));
 
-        const prompt = `You are a surgical code editor. The user wants to modify the file "${filePath}".
-User Instruction: "${fileData.instruction}"
-${fileData.content ? `Reference Code Provided by User:\n${fileData.content}\n` : ''}
+    if (!isPython) {
+      const htmlDoc = rawCode.includes('<html') || rawCode.includes('<!DOCTYPE')
+        ? rawCode
+        : `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:sans-serif;padding:16px;background:#0f172a;color:#f8fafc;}</style></head><body>${rawCode}</body></html>`;
+      frame.srcdoc = htmlDoc;
+      return;
+    }
 
-CRITICAL RULES:
-1. Do NOT rewrite the entire file.
-2. Find the EXACT existing code block in the file that needs to be changed or removed, and provide its replacement.
-3. Return ONLY valid JSON in this exact format:
-{"find": "exact substring from existing file", "replace": "new code to replace it with"}
+    frame.srcdoc = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{margin:0;padding:16px;background:#020617;color:#10b981;font-family:monospace;font-size:14px;}.header{color:#38bdf8;border-bottom:1px solid #1e293b;padding-bottom:8px;margin-bottom:12px;font-weight:bold;}pre{white-space:pre-wrap;word-break:break-word;margin:0;line-height:1.5;}.err{color:#f87171;}</style></head><body><div class="header">🐍 Satyexa Python Live Console</div><pre id="py-out">⏳ Initializing Python Runtime Engine...</pre></body></html>`;
 
-Existing File Content:
-${existingContent}`;
-
-        const aiRes = await fetch(`https://googleapis.com{geminiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { responseMimeType: 'application/json' }
-          })
-        });
-
-        const aiData = await aiRes.json();
-        const rawText = aiData?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!rawText) return res.status(500).json({ error: 'AI failed to generate patch.' });
-
-        const patch = JSON.parse(rawText);
-        if (!patch.find || !existingContent.includes(patch.find)) {
-          return res.status(400).json({
-            error: '⚠️ Safe-Guard Triggered: AI could not match exact lines to replace. Zero lines deleted! Use Manual Paste or clarify instruction.'
+    frame.onload = async function() {
+      const outEl = frame.contentDocument.getElementById('py-out');
+      try {
+        if (!window.loadPyodide) {
+          await new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = 'https://jsdelivr.net';
+            s.onload = resolve;
+            s.onerror = reject;
+            document.head.appendChild(s);
           });
         }
+        if (!pyodideReadyPromise) pyodideReadyPromise = window.loadPyodide();
+        const pyodide = await pyodideReadyPromise;
+        outEl.innerText = '▶ Running Python Code...\n\n';
 
-        finalContent = existingContent.replace(patch.find, patch.replace);
+        let outputBuffer = '';
+        pyodide.setStdout({ batched: (msg) => { outputBuffer += msg + '\n'; outEl.innerText = outputBuffer; } });
+        pyodide.setStderr({ batched: (msg) => { outputBuffer += '⚠️ ' + msg + '\n'; outEl.innerText = outputBuffer; } });
+        pyodide.globals.set('input', (promptText) => window.prompt(promptText || 'Enter Python input:') || '');
+
+        await pyodide.runPythonAsync(rawCode);
+        if (!outputBuffer.trim()) outEl.innerText = '✅ Execution finished (No console output).';
+      } catch (err) {
+        outEl.className = 'err';
+        outEl.innerText = '❌ Python Error:\n' + err.message;
+      }
+    };
+  };
+
+  // 4. Inject Top-Bar Controls (APEX/TRUTH-AI & Vault) + Code Action Buttons
+  setInterval(function() {
+    const webBtn = Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes('Web:'));
+    if (webBtn) {
+      if (!document.getElementById('truthCharToggleBtn')) {
+        const charBtn = document.createElement('button');
+        charBtn.id = 'truthCharToggleBtn';
+        charBtn.type = 'button';
+        charBtn.style.cssText = 'background:#1e293b; color:#38bdf8; border:1px solid #334155; padding:4px 10px; border-radius:6px; font-size:11.5px; font-weight:bold; cursor:pointer; margin-right:5px;';
+        charBtn.innerText = '⚡ Mode: APEX';
+        charBtn.onclick = function() {
+          window.satyexaTruthMode = !window.satyexaTruthMode;
+          charBtn.innerText = window.satyexaTruthMode ? '🔥 Mode: TRUTH-AI' : '⚡ Mode: APEX';
+          charBtn.style.background = window.satyexaTruthMode ? '#7f1d1d' : '#1e293b';
+          charBtn.style.color = window.satyexaTruthMode ? '#fca5a5' : '#38bdf8';
+          charBtn.style.borderColor = window.satyexaTruthMode ? '#ef4444' : '#334155';
+        };
+        webBtn.parentNode.insertBefore(charBtn, webBtn);
       }
 
-      // B. SMART AUTO-INJECT (Appends code safely without deleting old code)
-      else if (action === 'smart_inject') {
-        if (!existingContent) {
-          finalContent = fileData.content;
-        } else if (existingContent.includes('</body>')) {
-          finalContent = existingContent.replace('</body>', `\n${fileData.content}\n</body>`);
-        } else {
-          finalContent = existingContent + '\n' + fileData.content;
+      if (!document.getElementById('autoVaultBtn')) {
+        const btn = document.createElement('button');
+        btn.id = 'autoVaultBtn';
+        btn.type = 'button';
+        btn.style.cssText = 'background:#064e3b; color:#6ee7b7; border:1px solid #10b981; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; margin-right:5px;';
+        btn.innerText = '🔑 Vault';
+        btn.onclick = function() {
+          const savedEmail = localStorage.getItem('satyexa_vault_email') || '';
+          const savedPass = localStorage.getItem('satyexa_vault_pass') || 'Satyexa@2026!';
+          const savedName = localStorage.getItem('satyexa_vault_name') || 'Sadim Molla';
+          const newEmail = prompt('Enter Default Gmail for Auto-Account Creation:', savedEmail);
+          if (newEmail === null) return;
+          const newName = prompt('Enter Full Name for Forms:', savedName);
+          if (newName === null) return;
+          const newPass = prompt('Enter Default Password for New Accounts:', savedPass);
+          if (newPass === null) return;
+          localStorage.setItem('satyexa_vault_email', newEmail.trim());
+          localStorage.setItem('satyexa_vault_name', newName.trim());
+          localStorage.setItem('satyexa_vault_pass', newPass.trim());
+          alert('✅ Auto-Account Vault Saved!');
+        };
+        webBtn.parentNode.insertBefore(btn, webBtn);
+      }
+    }
+
+    document.querySelectorAll('.msg-wrap.ai-wrap').forEach(wrap => {
+      const actionsBar = wrap.querySelector('.msg-actions');
+      const preBlock = wrap.querySelector('pre');
+      if (!actionsBar) return;
+
+      const listenBtn = Array.from(actionsBar.querySelectorAll('button')).find(b => b.innerText.includes('Listen'));
+      if (listenBtn && !listenBtn.dataset.toggleUpgraded) {
+        listenBtn.dataset.toggleUpgraded = 'true';
+        const oldAttr = listenBtn.getAttribute('onclick') || '';
+        const matchEnc = oldAttr.match(/speakText\('([^']+)'\)/);
+        if (matchEnc) listenBtn.setAttribute('onclick', `speakText('${matchEnc[1]}', this)`);
+      }
+
+      if (preBlock && !actionsBar.dataset.codeToolsAdded) {
+        actionsBar.dataset.codeToolsAdded = 'true';
+        let rawCodeText = preBlock.innerText.trim();
+        let lang = 'auto';
+        const firstLine = rawCodeText.split('\n')[0].trim().toLowerCase();
+        if (['python', 'py', 'html', 'js', 'javascript', 'css'].includes(firstLine)) {
+          lang = (firstLine === 'py' || firstLine === 'python') ? 'python' : 'web';
+          rawCodeText = rawCodeText.split('\n').slice(1).join('\n').trim();
         }
+        const encCode = encodeURIComponent(rawCodeText);
+
+        const copyCodeBtn = document.createElement('button');
+        copyCodeBtn.type = 'button';
+        copyCodeBtn.className = 'mini-btn';
+        copyCodeBtn.innerText = '📄 Copy Code';
+        copyCodeBtn.setAttribute('onclick', `copyOnlyCode(this, '${encCode}')`);
+        actionsBar.appendChild(copyCodeBtn);
+
+        const liveRunBtn = document.createElement('button');
+        liveRunBtn.type = 'button';
+        liveRunBtn.className = 'mini-btn run-btn';
+        liveRunBtn.innerText = '▶ Live Run';
+        liveRunBtn.setAttribute('onclick', `executeUniversalLiveRun('${encCode}', '${lang}')`);
+        actionsBar.appendChild(liveRunBtn);
       }
+    });
+  }, 600);
 
-      // Push updated content to GitHub
-      const putBody = {
-        message: `Satyexa Studio: ${action} on ${filePath}`,
-        content: Buffer.from(finalContent, 'utf-8').toString('base64')
+  // 5. Fix File Upload (Supports Image, PDF, Video, Text/Code)
+  window.handleImageUpload = function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 4.2 * 1024 * 1024) {
+      alert('⚠️ ফাইল সাইজ ৪ MB-এর বেশি! দয়া করে ছোট ফাইল আপলোড করুন।');
+      e.target.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = function() {
+      const base64Result = reader.result;
+      window.attachedImage = base64Result;
+      window.attachedFilePayload = {
+        data: base64Result,
+        name: file.name,
+        type: file.type || 'application/octet-stream'
       };
-      if (fileSha) putBody.sha = fileSha;
-
-      const putRes = await fetch(apiUrl, {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify(putBody)
-      });
-      const putData = await putRes.json();
-
-      if (!putRes.ok) return res.status(putRes.status).json({ error: putData.message || 'GitHub Push Failed' });
-      return res.status(200).json({ success: true, message: `Safely updated ${filePath} on GitHub!` });
-    }
-
-    // 3. VERCEL INSTANT DEPLOYMENT
-    if (platform === 'vercel') {
-      const vToken = mode === 'admin' ? process.env.VERCEL_TOKEN : userConfig?.vercelToken;
-      if (!vToken) return res.status(400).json({ error: 'Vercel Token missing!' });
-
-      const vRes = await fetch('https://vercel.com', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${vToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: fileData.projectName || 'satyexa-app',
-          files: [{ file: fileData.path || 'index.html', data: fileData.content }],
-          projectSettings: { framework: null }
-        })
-      });
-      const vData = await vRes.json();
-      if (!vRes.ok) return res.status(vRes.status).json({ error: vData.error?.message || 'Vercel Deploy Failed' });
-      return res.status(200).json({ success: true, message: 'Deployed to Vercel!', liveUrl: 'https://' + vData.url });
-    }
-
-    // 4. CLOUDFLARE WORKER DEPLOYMENT
-    if (platform === 'cloudflare') {
-      const cfToken = mode === 'admin' ? process.env.CF_API_TOKEN : userConfig?.cfToken;
-      const cfAccount = mode === 'admin' ? process.env.CF_ACCOUNT_ID : userConfig?.cfAccountId;
-      if (!cfToken || !cfAccount) return res.status(400).json({ error: 'Cloudflare Token or Account ID missing!' });
-
-      const cfRes = await fetch(`https://cloudflare.com{cfAccount}/workers/scripts/${fileData.workerName || 'satyexa-worker'}`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${cfToken}`, 'Content-Type': 'application/javascript' },
-        body: fileData.content
-      });
-      const cfData = await cfRes.json();
-      if (!cfData.success) return res.status(400).json({ error: cfData.errors?.[0]?.message || 'Cloudflare Deploy Failed' });
-      return res.status(200).json({ success: true, message: 'Cloudflare Worker Deployed!' });
-    }
-
-    // 5. UNIVERSAL CUSTOM API (Any App / IDE / Hosting)
-    if (platform === 'universal' && customRequest?.endpointUrl) {
-      const uRes = await fetch(customRequest.endpointUrl, {
-        method: customRequest.method || 'POST',
-        headers: { 'Content-Type': 'application/json', ...(customRequest.headers || {}) },
-        body: typeof customRequest.payload === 'string' ? customRequest.payload : JSON.stringify(customRequest.payload)
-      });
-      const uText = await uRes.text();
-      return res.status(200).json({ success: uRes.ok, message: `Universal API Response (${uRes.status}): ${uText.slice(0, 150)}` });
-    }
-
-    return res.status(400).json({ error: 'Unsupported platform selected.' });
-  } catch (err) {
-    return res.status(500).json({ error: 'Server Error: ' + err.message });
-  }
-}
+      const previewBox = document.getElementById('previewBox');
+      const previewImg = document.getElementById('previewImg');
   
