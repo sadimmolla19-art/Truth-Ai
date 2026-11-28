@@ -24,6 +24,17 @@ async function parseSafeJson(response, providerName) {
   }
 }
 
+function buildConversationContext(messages) {
+  if (!Array.isArray(messages) || messages.length <= 1) return '';
+  const recent = messages.slice(-7, -1);
+  const formatted = recent.map(m => {
+    const role = (m.role === 'assistant' || m.role === 'ai' || m.role === 'model') ? 'AI' : 'User';
+    const txt = typeof m === 'string' ? m : (m.text || m.content || '');
+    return `${role}: ${String(txt).slice(0, 600)}`;
+  }).join('\n');
+  return formatted ? `\n[RECENT CONVERSATION MEMORY]:\n${formatted}\n` : '';
+}
+
 async function getLiveCryptoSnapshot(queryText) {
   const q = queryText.toLowerCase();
   const coins = [];
@@ -46,7 +57,6 @@ async function getLiveCryptoSnapshot(queryText) {
   }
 }
 module.exports = async function handler(req, res) {
-  
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -67,6 +77,7 @@ module.exports = async function handler(req, res) {
     }
 
     const incomingImage = body.imageBase64 || body.image || body.imageData || body.fileData || body.attachment || (Array.isArray(body.images) ? body.images.at(0) : '') || '';
+    const incomingMime = body.mimeType || 'image/jpeg';
 
     if (!String(prompt).trim() && incomingImage) {
       prompt = 'Analyze this uploaded file (image, video, or PDF) in detail.';
@@ -83,9 +94,11 @@ module.exports = async function handler(req, res) {
     const GROQ_KEY = process.env.GROQ_KEY || process.env.GROQ_API_KEY || '';
     const OPENROUTER_KEY = process.env.OPENROUTER_KEY || process.env.OPENROUTER_API_KEY || '';
 
+    const conversationMemory = buildConversationContext(body.messages);
     const liveMarketFeed = isMarketQuery ? await getLiveCryptoSnapshot(prompt) : '';
     const isTruthMode = Boolean(body.truthMode || body.truth || String(body.model || '').toLowerCase().includes('truth'));
-        async function resolveTargetUrlWithAI(userPrompt) {
+
+    async function resolveTargetUrlWithAI(userPrompt) {
       const urlMatch = userPrompt.match(/https?:\/\/[^\s"'<>]+/i);
       if (urlMatch) return urlMatch.at(0);
 
@@ -128,8 +141,7 @@ module.exports = async function handler(req, res) {
       } catch {}
       return '';
     }
-
-    async function runHeadlessAgent(userPrompt) {
+        async function runHeadlessAgent(userPrompt) {
       const browserlessKey = process.env.BROWSERLESS_API_KEY;
       if (!browserlessKey) {
         return { report: '\n[SYSTEM ALERT: BROWSERLESS_API_KEY is missing in Vercel Environment Variables.]\n', screenshot: null };
@@ -137,7 +149,7 @@ module.exports = async function handler(req, res) {
 
       const targetUrl = await resolveTargetUrlWithAI(userPrompt);
       const isBrowserIntent = Boolean(targetUrl) || /website|site|browse|visit|open|account|register|sign up|signup|fill|form|create|submit|login|khule|kule|screenshot|ss|scrape|ঢুকে|খুলে|একাউন্ট|অ্যাকাউন্ট/i.test(userPrompt);
-      
+
       if (!isBrowserIntent) return null;
 
       if (!targetUrl) {
@@ -206,9 +218,10 @@ module.exports = async function handler(req, res) {
 
             const title = await page.title();
             const finalUrl = page.url();
-            const content = await page.evaluate(() => document.body.innerText.slice(0, 3000));
+            const content = await page.evaluate(() => document.body.innerText.slice(0, 3500));
+            const topLinks = await page.evaluate(() => Array.from(document.querySelectorAll('a[href]')).slice(0, 10).map(a => a.innerText.trim() + ' -> ' + a.href).filter(Boolean).join('\n'));
             const screenshot = await page.screenshot({ encoding: 'base64', type: 'jpeg', quality: 65 });
-            return { data: { title, finalUrl, formFilled, username: usernameToUse, email: ${JSON.stringify(safeEmail)}, content, screenshot }, type: 'application/json' };
+            return { data: { title, finalUrl, formFilled, username: usernameToUse, email: ${JSON.stringify(safeEmail)}, content, topLinks, screenshot }, type: 'application/json' };
           };
         `;
 
@@ -224,7 +237,7 @@ module.exports = async function handler(req, res) {
         }
         const json = await r.json();
         return {
-          report: `\n[HEADLESS CHROME AGENT EXECUTION REPORT]:\nTarget URL: ${targetUrl}\nFinal URL: ${json.data?.finalUrl}\nPage Title: ${json.data?.title}\nForm Auto-Filled & Submitted: ${json.data?.formFilled}\nGenerated Credentials: Email=${json.data?.email}, Username=${json.data?.username}, Password=${safePass}\nExtracted Page Content:\n${json.data?.content}\n`,
+          report: `\n[HEADLESS CHROME AGENT EXECUTION REPORT]:\nTarget URL: ${targetUrl}\nFinal URL: ${json.data?.finalUrl}\nPage Title: ${json.data?.title}\nForm Auto-Filled & Submitted: ${json.data?.formFilled}\nGenerated Credentials: Email=${json.data?.email}, Username=${json.data?.username}, Password=${safePass}\nExtracted Page Content:\n${json.data?.content}\nKey Links Found:\n${json.data?.topLinks}\n`,
           screenshot: json.data?.screenshot ? `data:image/jpeg;base64,${json.data.screenshot}` : null
         };
       } catch (e) {
@@ -234,7 +247,7 @@ module.exports = async function handler(req, res) {
 
     const headlessResult = await runHeadlessAgent(prompt);
     const headlessReport = headlessResult ? headlessResult.report : '';
-              let systemPrompt = body.customPersona || `You are Satyexa AI (APEX-GOD-MODE), an autonomous AI system with a built-in Headless Chrome Browser Agent, Multimodal Vision (Image/Video/PDF), and Live Market Feed.
+        let systemPrompt = body.customPersona || `You are Satyexa AI (APEX-GOD-MODE), an autonomous AI system with a built-in Headless Chrome Browser Agent, Multimodal Vision (Image/Video/PDF), and Live Market Feed.
 CRITICAL RULES:
 - You DO have a real Headless Chrome Browser Agent. NEVER say "I cannot open websites" or "I cannot create accounts".
 - Always report the exact results from [HEADLESS CHROME AGENT EXECUTION REPORT] (including Final URL, Form Auto-Filled status, Generated Credentials, and Page Content). If [HEADLESS AGENT ERROR] or [SYSTEM ALERT] appears, show that exact error message to the user so they know why Browserless failed.
@@ -384,29 +397,26 @@ COMPARISON OUTPUT FORMAT:
 
 You are TRUTH-AI.
 Be decisive, analytical, confident and honest.`;
-
-if (headlessReport) {
-  systemPrompt = `CRITICAL SYSTEM OVERRIDE: You ARE a live Headless Chrome Browser Agent. Present the exact execution report and screenshot URL below to the user clearly in their language:\n${headlessReport}\n\n` + systemPrompt;
-}
-
-async function callGemini(userText, modelName, useSearchTool = false) {
-  if (!GEMINI_KEY) throw new Error('No Gemini Key');
-  const url = `${GEMINI_ROOT}/${modelName}:generateContent?key=${GEMINI_KEY}`;
-
-  const parts = [{ text: `${systemPrompt}\n${liveMarketFeed}\n${headlessReport}\nUser: ${userText}` }];
-  const rawFile = incomingImage;
-
-
-    if (rawFile && typeof rawFile === 'string') {
-    if (rawFile.startsWith('data:')) {
-      const mimeType = rawFile.split(';').at(0).replace('data:', '') || 'image/jpeg';
-      const base64Data = rawFile.split(',').at(1);
-      parts.push({ inlineData: { mimeType, data: base64Data } });
-    } else {
-      parts.push({ inlineData: { mimeType: 'image/jpeg', data: rawFile } });
     }
+
+    if (headlessReport) {
+      systemPrompt = `CRITICAL SYSTEM OVERRIDE: You ARE a live Headless Chrome Browser Agent. Present the exact execution report below to the user clearly in their language:\n${headlessReport}\n\n` + systemPrompt;
     }
-  
+        async function callGemini(userText, modelName, useSearchTool = false) {
+      if (!GEMINI_KEY) throw new Error('No Gemini Key');
+      const url = `${GEMINI_ROOT}/${modelName}:generateContent?key=${GEMINI_KEY}`;
+
+      const parts = [{ text: `${systemPrompt}\n${liveMarketFeed}\n${headlessReport}\n${conversationMemory}\nUser: ${userText}` }];
+      if (incomingImage && typeof incomingImage === 'string') {
+        if (incomingImage.startsWith('data:')) {
+          const mimeType = incomingImage.split(';').at(0).replace('data:', '') || incomingMime;
+          const base64Data = incomingImage.split(',').at(1);
+          parts.push({ inlineData: { mimeType, data: base64Data } });
+        } else {
+          parts.push({ inlineData: { mimeType: incomingMime, data: incomingImage } });
+        }
+      }
+
       const payload = { contents: [{ parts }] };
       if (useSearchTool && !incomingImage) {
         payload.tools = [{ googleSearch: {} }];
@@ -422,7 +432,7 @@ async function callGemini(userText, modelName, useSearchTool = false) {
       if (!replyText) throw new Error('Empty Gemini response');
       return { text: replyText, engine: `${modelName.toUpperCase()}${incomingImage ? ' + MULTIMODAL' : ''}` };
     }
-    
+
     async function callGroq(userText, modelName) {
       if (!GROQ_KEY) throw new Error('No Groq Key');
       const r = await fetchWithTimeout(GROQ_URL, {
@@ -434,7 +444,7 @@ async function callGemini(userText, modelName, useSearchTool = false) {
         body: JSON.stringify({
           model: modelName,
           messages: [
-            { role: 'system', content: systemPrompt + liveMarketFeed + headlessReport },
+            { role: 'system', content: systemPrompt + liveMarketFeed + headlessReport + conversationMemory },
             { role: 'user', content: userText }
           ]
         })
@@ -459,7 +469,7 @@ async function callGemini(userText, modelName, useSearchTool = false) {
         body: JSON.stringify({
           model: modelName,
           messages: [
-            { role: 'system', content: systemPrompt + liveMarketFeed + headlessReport },
+            { role: 'system', content: systemPrompt + liveMarketFeed + headlessReport + conversationMemory },
             { role: 'user', content: userText }
           ]
         })
@@ -470,16 +480,14 @@ async function callGemini(userText, modelName, useSearchTool = false) {
       if (!replyText) throw new Error('Empty OpenRouter response');
       return { text: replyText, engine: modelName.split('/').pop().toUpperCase() };
     }
-
-    const fallbackChain = [];
-  if (incomingImage) {
-  fallbackChain.push(
-    () => callGemini(prompt, 'gemini-2.5-flash', false),
-    () => callGemini(prompt, 'gemini-2.5-pro', false),
-    () => callGemini(prompt, 'gemini-flash-latest', false)
-  );
-} else if (isTruthMode) {
-      
+        const fallbackChain = [];
+    if (incomingImage) {
+      fallbackChain.push(
+        () => callGemini(prompt, 'gemini-2.5-flash', false),
+        () => callGemini(prompt, 'gemini-2.5-pro', false),
+        () => callGemini(prompt, 'gemini-flash-latest', false)
+      );
+    } else if (isTruthMode) {
       fallbackChain.push(
         () => callOpenRouter(prompt, 'deepseek/deepseek-r1:free'),
         () => callOpenRouter(prompt, 'openrouter/auto'),
@@ -538,5 +546,4 @@ async function callGemini(userText, modelName, useSearchTool = false) {
       reply: `⚠️ System Notice: ${err.message}`
     });
   }
-        }
-      
+};
