@@ -395,18 +395,17 @@ async function callGemini(userText, modelName, useSearchTool = false) {
 
   const parts = [{ text: `${systemPrompt}\n${liveMarketFeed}\n${headlessReport}\nUser: ${userText}` }];
   const rawFile = incomingImage;
-  
-  if (rawFile && typeof rawFile === 'string') {
+
+
+    if (rawFile && typeof rawFile === 'string') {
     if (rawFile.startsWith('data:')) {
-        const mimeType = rawFile.split(';').at(0).replace('data:', '') || 'image/jpeg';
-    const base64Data = rawFile.split(',').at(1);
-      
+      const mimeType = rawFile.split(';').at(0).replace('data:', '') || 'image/jpeg';
+      const base64Data = rawFile.split(',').at(1);
       parts.push({ inlineData: { mimeType, data: base64Data } });
     } else {
       parts.push({ inlineData: { mimeType: 'image/jpeg', data: rawFile } });
-      
     }
-
+    }
   
       const payload = { contents: [{ parts }] };
       if (useSearchTool && !incomingImage) {
