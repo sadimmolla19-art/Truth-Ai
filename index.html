@@ -1438,9 +1438,79 @@ setInterval(function() {
       statusEl.style.color = '#38bdf8';
       statusEl.innerText = '⏳ সার্ভারের সাথে সংযোগ হচ্ছে...';
 
-      try {
+            try {
         const res = await fetch('/api/deployer', {
           method: 'POST',
-  </script>
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            mode: modeVal,
+            password: passVal,
+            platform: 'github',
+            action: actionMap,
+            fileData: { path: filePathVal || 'index.html', instruction: instructionVal, content: codeVal }
+          })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          statusEl.style.color = '#34d399';
+          statusEl.innerText = '✅ ' + data.message;
+        } else {
+          statusEl.style.color = '#f87171';
+          statusEl.innerText = '❌ ' + (data.error || 'Deployment failed');
+        }
+      } catch (err) {
+        statusEl.style.color = '#f87171';
+        statusEl.innerText = '❌ Error: ' + err.message;
+      }
+      deployBtn.disabled = false;
+      deployBtn.innerText = '🚀 Execute & Deploy';
+    };
+  }
+
+  // 6. Intercept /api/chat to Render Uploaded Media Above User Message & Send Payload
+  const masterFetch = window.fetch;
+  window.fetch = async function(resource, config) {
+    if (typeof resource === 'string' && resource.includes('/api/chat') && config && config.body) {
+      try {
+        const bodyObj = JSON.parse(config.body);
+        if (window.attachedFilePayload) {
+          const payloadCopy = { ...window.attachedFilePayload };
+          bodyObj.imageBase64 = payloadCopy.data;
+          bodyObj.fileData = payloadCopy.data;
+          bodyObj.fileName = payloadCopy.name;
+          bodyObj.mimeType = payloadCopy.type;
+
+          setTimeout(() => {
+            const userBubbles = document.querySelectorAll('.msg-wrap.user-wrap .msg');
+            const lastBubble = userBubbles[userBubbles.length - 1];
+            if (lastBubble && !lastBubble.querySelector('.chat-attached-media, .chat-attached-badge')) {
+              if (payloadCopy.type.startsWith('image/')) {
+                lastBubble.insertAdjacentHTML('afterbegin', `<img src="${payloadCopy.data}" class="chat-attached-media" />`);
+              } else {
+                lastBubble.insertAdjacentHTML('afterbegin', `<div class="chat-attached-badge">📎 ${payloadCopy.name}</div><br>`);
+              }
+            }
+          }, 80);
+
+          window.attachedFilePayload = null;
+          attachedImage = null;
+          const previewBox = document.getElementById('previewBox');
+          if (previewBox) previewBox.classList.add('hidden');
+        }
+        const lastText = (bodyObj.messages && bodyObj.messages.length) ? (bodyObj.messages[bodyObj.messages.length - 1].text || '') : '';
+        if (/http|www\.|\.com|\.net|\.org|screenshot|website|account|signup|register|headless/i.test(lastText)) {
+          bodyObj.webSearch = true;
+        }
+        bodyObj.truthMode = !!window.satyexaTruthMode;
+        bodyObj.vaultEmail = localStorage.getItem('satyexa_vault_email') || '';
+        bodyObj.vaultName = localStorage.getItem('satyexa_vault_name') || 'Sadim Molla';
+        bodyObj.vaultPass = localStorage.getItem('satyexa_vault_pass') || 'Satyexa@2026!';
+        config.body = JSON.stringify(bodyObj);
+      } catch (err) {}
+    }
+    return masterFetch.apply(this, arguments);
+  };
+})();
+</script>
 </body>
-        </html>                      
+</html>
