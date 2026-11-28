@@ -1232,121 +1232,26 @@ setInterval(function() {
   }, 500);
 })();
     </script>
-  <!-- SATYEXA UNIFIED ENGINE: LIVE RUN (PYTHON/WEB), COPY CODE, CHARACTER, VAULT, VISION, 8K STUDIO & HEADLESS AGENT -->
+  <!-- SATYEXA UNIFIED ENGINE: CHARACTER, VAULT, VISION (IMAGE/VIDEO/PDF), 8K STUDIO, HEADLESS & DEPLOYER -->
+<style>
+  .msg, .msg-wrap { font-family: 'Noto Sans Bengali', 'Hind Siliguri', 'Segoe UI', system-ui, sans-serif !important; line-height: 1.65 !important; }
+  .chat-attached-media { max-width: 220px; border-radius: 8px; margin-bottom: 6px; display: block; border: 1px solid #334155; }
+  .chat-attached-badge { background: #1e293b; color: #38bdf8; padding: 4px 8px; border-radius: 6px; font-size: 12px; display: inline-block; margin-bottom: 6px; border: 1px solid #334155; }
+</style>
 <script>
 (function() {
   window.satyexaTruthMode = false;
   window.attachedFilePayload = null;
-  let isSpeaking = false;
-  let activeSpeakBtn = null;
-  let pyodideReadyPromise = null;
 
-  // 1. Voice Listen ON/OFF Toggle Logic
-  window.speakText = function(encoded, btnEl) {
-    if (!('speechSynthesis' in window)) return alert('Text-to-Speech is not supported in this browser.');
-    if (isSpeaking || window.speechSynthesis.speaking) {
-      window.speechSynthesis.cancel();
-      isSpeaking = false;
-      if (activeSpeakBtn) activeSpeakBtn.innerText = '🔊 Listen';
-      if (btnEl && btnEl === activeSpeakBtn) {
-        activeSpeakBtn = null;
-        return;
-      }
-    }
-    let clean = decodeURIComponent(encoded)
-      .replace(/```[\s\S]*?```/g, ' Code snippet. ')
-      .replace(/[#*`$~_>]/g, '')
-      .trim();
-    if (!clean) return;
-
-    const utter = new SpeechSynthesisUtterance(clean);
-    utter.lang = /[\u0980-\u09FF]/.test(clean) ? 'bn-BD' : 'en-US';
-    utter.onstart = function() {
-      isSpeaking = true;
-      if (btnEl) {
-        activeSpeakBtn = btnEl;
-        btnEl.innerText = '⏹ Stop Audio';
-      }
-    };
-    utter.onend = utter.onerror = function() {
-      isSpeaking = false;
-      if (activeSpeakBtn) activeSpeakBtn.innerText = '🔊 Listen';
-      activeSpeakBtn = null;
-    };
-    window.speechSynthesis.speak(utter);
-  };
-
-  // 2. Copy Code Only Function
-  window.copyOnlyCode = function(btn, encodedCode) {
-    const code = decodeURIComponent(encodedCode);
-    navigator.clipboard.writeText(code);
-    const oldText = btn.innerText;
-    btn.innerText = '✅ Code Copied';
-    setTimeout(() => { btn.innerText = oldText; }, 1600);
-  };
-
-  // 3. Universal Live Run Engine (HTML/CSS/JS + Python in Browser)
-  window.executeUniversalLiveRun = async function(encodedCode, langHint) {
-    const rawCode = decodeURIComponent(encodedCode).trim();
-    const modal = document.getElementById('sandboxModal');
-    const frame = document.getElementById('sandboxFrame');
-    if (!modal || !frame) return;
-
-    modal.classList.remove('hidden');
-
-    const isPython = langHint === 'python' ||
-      (!rawCode.includes('<html') && !rawCode.includes('<!DOCTYPE') && !rawCode.includes('<div') &&
-      (rawCode.includes('print(') || rawCode.includes('def ') || rawCode.includes('import ') || rawCode.includes('input(')));
-
-    if (!isPython) {
-      const htmlDoc = rawCode.includes('<html') || rawCode.includes('<!DOCTYPE')
-        ? rawCode
-        : `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:sans-serif;padding:16px;background:#0f172a;color:#f8fafc;}</style></head><body>${rawCode}</body></html>`;
-      frame.srcdoc = htmlDoc;
-      return;
-    }
-
-    frame.srcdoc = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{margin:0;padding:16px;background:#020617;color:#10b981;font-family:monospace;font-size:14px;}.header{color:#38bdf8;border-bottom:1px solid #1e293b;padding-bottom:8px;margin-bottom:12px;font-weight:bold;}pre{white-space:pre-wrap;word-break:break-word;margin:0;line-height:1.5;}.err{color:#f87171;}</style></head><body><div class="header">🐍 Satyexa Python Live Console</div><pre id="py-out">⏳ Initializing Python Runtime Engine...</pre></body></html>`;
-
-    frame.onload = async function() {
-      const outEl = frame.contentDocument.getElementById('py-out');
-      try {
-        if (!window.loadPyodide) {
-          await new Promise((resolve, reject) => {
-            const s = document.createElement('script');
-            s.src = 'https://jsdelivr.net';
-            s.onload = resolve;
-            s.onerror = reject;
-            document.head.appendChild(s);
-          });
-        }
-        if (!pyodideReadyPromise) pyodideReadyPromise = window.loadPyodide();
-        const pyodide = await pyodideReadyPromise;
-        outEl.innerText = '▶ Running Python Code...\n\n';
-
-        let outputBuffer = '';
-        pyodide.setStdout({ batched: (msg) => { outputBuffer += msg + '\n'; outEl.innerText = outputBuffer; } });
-        pyodide.setStderr({ batched: (msg) => { outputBuffer += '⚠️ ' + msg + '\n'; outEl.innerText = outputBuffer; } });
-        pyodide.globals.set('input', (promptText) => window.prompt(promptText || 'Enter Python input:') || '');
-
-        await pyodide.runPythonAsync(rawCode);
-        if (!outputBuffer.trim()) outEl.innerText = '✅ Execution finished (No console output).';
-      } catch (err) {
-        outEl.className = 'err';
-        outEl.innerText = '❌ Python Error:\n' + err.message;
-      }
-    };
-  };
-
-  // 4. Inject Top-Bar Controls (APEX/TRUTH-AI & Vault) + Code Action Buttons
-  setInterval(function() {
-    const webBtn = Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes('Web:'));
-    if (webBtn) {
+  // 1. Inject Top-Bar Controls (APEX/TRUTH-AI & Vault) + Wire Sidebar Deploy Button
+  function injectTopControls() {
+    const webBtn = document.getElementById('webBtn');
+    if (webBtn && webBtn.parentNode) {
       if (!document.getElementById('truthCharToggleBtn')) {
         const charBtn = document.createElement('button');
         charBtn.id = 'truthCharToggleBtn';
         charBtn.type = 'button';
-        charBtn.style.cssText = 'background:#1e293b; color:#38bdf8; border:1px solid #334155; padding:4px 10px; border-radius:6px; font-size:11.5px; font-weight:bold; cursor:pointer; margin-right:5px;';
+        charBtn.style.cssText = 'background:#1e293b; color:#38bdf8; border:1px solid #334155; padding:5px 9px; border-radius:8px; font-size:11px; font-weight:bold; cursor:pointer;';
         charBtn.innerText = '⚡ Mode: APEX';
         charBtn.onclick = function() {
           window.satyexaTruthMode = !window.satyexaTruthMode;
@@ -1362,7 +1267,7 @@ setInterval(function() {
         const btn = document.createElement('button');
         btn.id = 'autoVaultBtn';
         btn.type = 'button';
-        btn.style.cssText = 'background:#064e3b; color:#6ee7b7; border:1px solid #10b981; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; margin-right:5px;';
+        btn.style.cssText = 'background:#064e3b; color:#6ee7b7; border:1px solid #10b981; padding:5px 8px; border-radius:8px; font-size:11px; font-weight:bold; cursor:pointer;';
         btn.innerText = '🔑 Vault';
         btn.onclick = function() {
           const savedEmail = localStorage.getItem('satyexa_vault_email') || '';
@@ -1383,70 +1288,124 @@ setInterval(function() {
       }
     }
 
-    document.querySelectorAll('.msg-wrap.ai-wrap').forEach(wrap => {
-      const actionsBar = wrap.querySelector('.msg-actions');
-      const preBlock = wrap.querySelector('pre');
-      if (!actionsBar) return;
+    const sideDeployBtn = Array.from(document.querySelectorAll('button, div')).find(el => el.innerText && el.innerText.includes('Universal Deploy Studio'));
+    if (sideDeployBtn && !sideDeployBtn.dataset.wired) {
+      sideDeployBtn.dataset.wired = 'true';
+      sideDeployBtn.onclick = function() {
+        const bottomDeploy = Array.from(document.querySelectorAll('button')).find(b => b.innerText && b.innerText.includes('Deploy Studio'));
+        if (bottomDeploy) bottomDeploy.click();
+      };
+    }
+  }
+  injectTopControls();
+  setInterval(injectTopControls, 800);
 
-      const listenBtn = Array.from(actionsBar.querySelectorAll('button')).find(b => b.innerText.includes('Listen'));
-      if (listenBtn && !listenBtn.dataset.toggleUpgraded) {
-        listenBtn.dataset.toggleUpgraded = 'true';
-        const oldAttr = listenBtn.getAttribute('onclick') || '';
-        const matchEnc = oldAttr.match(/speakText\('([^']+)'\)/);
-        if (matchEnc) listenBtn.setAttribute('onclick', `speakText('${matchEnc[1]}', this)`);
-      }
+  // 2. Allow Video, PDF, Image & Code Files
+  const fileInp = document.getElementById('imageUpload');
+  if (fileInp) fileInp.setAttribute('accept', 'image/*,video/*,.pdf,.txt,.py,.js,.html,.doc,.docx');
 
-      if (preBlock && !actionsBar.dataset.codeToolsAdded) {
-        actionsBar.dataset.codeToolsAdded = 'true';
-        let rawCodeText = preBlock.innerText.trim();
-        let lang = 'auto';
-        const firstLine = rawCodeText.split('\n')[0].trim().toLowerCase();
-        if (['python', 'py', 'html', 'js', 'javascript', 'css'].includes(firstLine)) {
-          lang = (firstLine === 'py' || firstLine === 'python') ? 'python' : 'web';
-          rawCodeText = rawCodeText.split('\n').slice(1).join('\n').trim();
-        }
-        const encCode = encodeURIComponent(rawCodeText);
-
-        const copyCodeBtn = document.createElement('button');
-        copyCodeBtn.type = 'button';
-        copyCodeBtn.className = 'mini-btn';
-        copyCodeBtn.innerText = '📄 Copy Code';
-        copyCodeBtn.setAttribute('onclick', `copyOnlyCode(this, '${encCode}')`);
-        actionsBar.appendChild(copyCodeBtn);
-
-        const liveRunBtn = document.createElement('button');
-        liveRunBtn.type = 'button';
-        liveRunBtn.className = 'mini-btn run-btn';
-        liveRunBtn.innerText = '▶ Live Run';
-        liveRunBtn.setAttribute('onclick', `executeUniversalLiveRun('${encCode}', '${lang}')`);
-        actionsBar.appendChild(liveRunBtn);
-      }
-    });
-  }, 600);
-
-  // 5. Fix File Upload (Supports Image, PDF, Video, Text/Code)
   window.handleImageUpload = function(e) {
-    const file = e.target.files[0];
+    const file = e.target.files && e.target.files;
     if (!file) return;
     if (file.size > 4.2 * 1024 * 1024) {
-      alert('⚠️ ফাইল সাইজ ৪ MB-এর বেশি! দয়া করে ছোট ফাইল আপলোড করুন।');
+      alert('⚠️ ফাইল সাইজ ৪ MB-এর বেশি! দয়া করে ছোট ফাইল দিন।');
       e.target.value = '';
       return;
     }
     const reader = new FileReader();
     reader.onload = function() {
-      const base64Result = reader.result;
-      window.attachedImage = base64Result;
+      attachedImage = reader.result;
       window.attachedFilePayload = {
-        data: base64Result,
+        data: reader.result,
         name: file.name,
         type: file.type || 'application/octet-stream'
       };
       const previewBox = document.getElementById('previewBox');
       const previewImg = document.getElementById('previewImg');
-  <script>
-(function() {
-  // Fix Execute & Deploy Button inside Deploy Studio Modal
+      if (previewBox) {
+        previewBox.classList.remove('hidden');
+        const span = previewBox.querySelector('span');
+        if (file.type.startsWith('image/') && previewImg) {
+          previewImg.src = reader.result;
+          previewImg.style.display = 'block';
+          if (span) span.innerText = '🖼️ ' + file.name;
+        } else {
+          if (previewImg) previewImg.style.display = 'none';
+          if (span) span.innerText = '📎 ' + file.name + ' (Ready to analyze)';
+        }
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  // 3. Fix 8K Image Studio
+  window.generateArt = function() {
+    const promptEl = document.getElementById('imgPrompt');
+    const prompt = promptEl ? promptEl.value.trim() : '';
+    if (!prompt) {
+      alert('⚠️ দয়া করে ছবির বর্ণনা (Prompt) লিখুন!');
+      if (promptEl) promptEl.focus();
+      return;
+    }
+    const resDiv = document.getElementById('imageResult');
+    const seed = Math.floor(Math.random() * 999999);
+    const url = 'https://pollinations.ai' + encodeURIComponent(prompt) + '?width=1024&height=1024&seed=' + seed + '&nologo=true&safe=false&model=flux';
+    resDiv.innerHTML = '<p class="small" style="color:#38bdf8;">⏳ 8K Ultra HD আর্টওয়ার্ক তৈরি হচ্ছে, ৫-১০ সেকেন্ড অপেক্ষা করুন...</p>';
+
+    const img = new Image();
+    img.onload = function() {
+      resDiv.innerHTML = '';
+      resDiv.appendChild(img);
+      resDiv.insertAdjacentHTML('beforeend',
+        '<a href="' + url + '" download="satyexa-8k-art.jpg" target="_blank">' +
+        '<button class="btn-full" style="margin-top:10px;">⬇ Download 8K HD Image</button></a>'
+      );
+    };
+    img.onerror = function() {
+      resDiv.innerHTML = '<p class="small" style="color:#f87171;">⚠️ সার্ভার ব্যস্ত আছে, আবার Generate বাটনে ক্লিক করুন।</p>';
+    };
+    img.src = url;
+  };
+
+  // 4. Fix Headless Browser Modal -> Route to /api/chat
+  window._runHeadlessBrowser = async function() {
+    const url = document.getElementById('stx-hl-url').value.trim();
+    const email = document.getElementById('stx-hl-email').value.trim();
+    const pass = document.getElementById('stx-hl-pass').value.trim() || ('Satyexa@' + Math.random().toString(36).slice(-6).toUpperCase() + '9');
+    const out = document.getElementById('stx-hl-out');
+    const btn = document.getElementById('stx-hl-btn');
+    if (!url) { out.innerText = '⚠️ অনুগ্রহ করে ওয়েবসাইটের URL দিন!'; return; }
+
+    btn.disabled = true;
+    btn.innerText = '⏳ Running Headless Chrome...';
+    out.innerText = '🌐 Headless Chrome চালু হচ্ছে এবং ওয়েবসাইটে প্রবেশ করছে...';
+
+    try {
+      const commandText = email
+        ? `Open website ${url} in headless browser, create account and fill-up signup form using email: ${email} and password: ${pass}, and capture screenshot.`
+        : `Open website ${url} in headless browser, read data and capture screenshot.`;
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [{ role: 'user', text: commandText }],
+          webSearch: true,
+          vaultEmail: email,
+          vaultPass: pass,
+          model: 'gemini-4-neon'
+        })
+      });
+      const data = await res.json();
+      out.innerText = data.reply || data.error || '✅ Execution completed.';
+    } catch (e) {
+      out.innerText = '❌ Error: ' + e.message;
+    }
+    btn.disabled = false;
+    btn.innerText = '🚀 Launch Headless Browser & Register';
+  };
+
+  // 5. Fix Execute & Deploy Button inside Deploy Studio Modal
   const deployBtn = Array.from(document.querySelectorAll('button')).find(b => b.innerText && b.innerText.includes('Execute & Deploy'));
   if (deployBtn) {
     deployBtn.onclick = async function() {
@@ -1455,7 +1414,7 @@ setInterval(function() {
       const inputs = modal.querySelectorAll('input');
       const textareas = modal.querySelectorAll('textarea');
 
-      const modeVal = selects.value && selects.value.includes('admin') ? 'admin' : 'user';
+      const modeVal = selects && selects.value.includes('admin') ? 'admin' : 'user';
       const passVal = inputs ? inputs.value.trim() : '';
       const actionSelect = selects ? selects.value : 'smart_inject';
       const filePathVal = inputs ? inputs.value.trim() : 'index.html';
@@ -1475,41 +1434,13 @@ setInterval(function() {
       }
 
       deployBtn.disabled = true;
-      deployBtn.innerText = '⏳ Deploying to GitHub...';
+      deployBtn.innerText = '⏳ Deploying...';
       statusEl.style.color = '#38bdf8';
       statusEl.innerText = '⏳ সার্ভারের সাথে সংযোগ হচ্ছে...';
 
       try {
         const res = await fetch('/api/deployer', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            mode: modeVal,
-            password: passVal,
-            platform: 'github',
-            action: actionMap,
-            fileData: { path: filePathVal || 'index.html', instruction: instructionVal, content: codeVal }
-          })
-        });
-        const data = await res.json();
-        if (res.ok && data.success) {
-          statusEl.style.color = '#34d399';
-          statusEl.innerText = '✅ ' + data.message;
-        } else {
-          statusEl.style.color = '#f87171';
-          statusEl.innerText = '❌ ' + (data.error || 'Deployment failed');
-        }
-      } catch (err) {
-        statusEl.style.color = '#f87171';
-        statusEl.innerText = '❌ Error: ' + err.message;
-      }
-      deployBtn.disabled = false;
-      deployBtn.innerText = '🚀 Execute & Deploy';
-    };
-  }
-})();
-</script>
-  
+  </script>
 </body>
-</html>
-  
+        </html>                      
