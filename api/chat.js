@@ -394,17 +394,19 @@ async function callGemini(userText, modelName, useSearchTool = false) {
   const url = `${GEMINI_ROOT}/${modelName}:generateContent?key=${GEMINI_KEY}`;
 
   const parts = [{ text: `${systemPrompt}\n${liveMarketFeed}\n${headlessReport}\nUser: ${userText}` }];
-  const rawFile = body.fileData || incomingImage;
+  const rawFile = incomingImage;
+  
   if (rawFile && typeof rawFile === 'string') {
     if (rawFile.startsWith('data:')) {
-          const mimeType = rawFile.split(';').at(0).replace('data:', '') || body.mimeType || 'image/jpeg';
+        const mimeType = rawFile.split(';').at(0).replace('data:', '') || 'image/jpeg';
     const base64Data = rawFile.split(',').at(1);
       
       parts.push({ inlineData: { mimeType, data: base64Data } });
     } else {
-      parts.push({ inlineData: { mimeType: body.mimeType || 'image/jpeg', data: rawFile } });
+      parts.push({ inlineData: { mimeType: 'image/jpeg', data: rawFile } });
+      
     }
-  }
+
   
       const payload = { contents: [{ parts }] };
       if (useSearchTool && !incomingImage) {
@@ -471,7 +473,7 @@ async function callGemini(userText, modelName, useSearchTool = false) {
     }
 
     const fallbackChain = [];
-    if (incomingImage || body.fileData) {
+  if (incomingImage) {
   fallbackChain.push(
     () => callGemini(prompt, 'gemini-2.5-flash', false),
     () => callGemini(prompt, 'gemini-2.5-pro', false),
