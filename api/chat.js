@@ -66,7 +66,7 @@ export default async function handler(req, res) {
       prompt = body.contents.at(-1)?.parts?.at(0)?.text || '';
     }
 
-    const incomingImage = body.imageBase64 || body.image || body.imageData || body.fileData || body.attachment || (Array.isArray(body.images) ? body.images[0] : '') || '';
+    const incomingImage = body.imageBase64 || body.image || body.imageData || body.fileData || body.attachment || (Array.isArray(body.images) ? body.images.at(0) : '') || '';
 
     if (!String(prompt).trim() && incomingImage) {
       prompt = 'Analyze this uploaded file (image, video, or PDF) in detail.';
@@ -85,46 +85,76 @@ export default async function handler(req, res) {
 
     const liveMarketFeed = isMarketQuery ? await getLiveCryptoSnapshot(prompt) : '';
     const isTruthMode = Boolean(body.truthMode || body.truth || String(body.model || '').toLowerCase().includes('truth'));
-        async function runHeadlessAgent(userPrompt) {
+        async function resolveTargetUrlWithAI(userPrompt) {
+      const urlMatch = userPrompt.match(/https?:\/\/[^\s"'<>]+/i);
+      if (urlMatch) return urlMatch.at(0);
+
+      const domainMatch = userPrompt.match(/\b([a-zA-Z0-9-]+(?:\.[a-zA-Z]{2,})+)\b/i);
+      if (domainMatch && !/gmail\.com|yahoo\.com|outlook\.com|hotmail\.com/i.test(domainMatch.at(0))) {
+        return 'https://' + domainMatch.at(0);
+      }
+
+      const isAction = /website|site|browse|visit|open|account|register|sign up|signup|fill|form|create|submit|login|khule|kule|koro|dao|screenshot|ss|scrape|read|ঢুকে|খুলে|একাউন্ট|অ্যাকাউন্ট|ফর্ম/i.test(userPrompt);
+      if (!isAction) return '';
+
+      try {
+        if (GROQ_KEY) {
+          const r = await fetchWithTimeout(GROQ_URL, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${GROQ_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: 'llama-3.1-8b-instant',
+              messages: [{
+                role: 'user',
+                content: `Extract the target website URL from this command (in any language). If the user wants to create an account or sign up on a named platform (e.g., Facebook, Canva, GitHub, Pinterest, Daraz, etc.), return its direct registration/signup URL. If no specific website or platform is mentioned, return ONLY the word NONE. Return ONLY the raw URL or NONE, nothing else.\nCommand: "${userPrompt}"`
+              }]
+            })
+          }, 6000);
+          const d = await r.json();
+          const extracted = (d.choices?.at(0)?.message?.content || '').trim();
+          if (extracted.startsWith('http')) return extracted;
+        } else if (GEMINI_KEY) {
+          const r = await fetchWithTimeout(`${GEMINI_ROOT}/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: `Extract the target website URL from this command. If creating an account on a named site, return its signup URL. If no website name is mentioned, return ONLY NONE. Command: "${userPrompt}"` }] }]
+            })
+          }, 6000);
+          const d = await r.json();
+          const extracted = (d.candidates?.at(0)?.content?.parts?.at(0)?.text || '').trim();
+          if (extracted.startsWith('http')) return extracted;
+        }
+      } catch {}
+      return '';
+    }
+
+    async function runHeadlessAgent(userPrompt) {
       const browserlessKey = process.env.BROWSERLESS_API_KEY;
-      if (!browserlessKey) return { report: '\n[SYSTEM NOTE: BROWSERLESS_API_KEY is missing in Vercel Environment Variables.]\n', screenshot: null };
-
-      let urlMatch = userPrompt.match(/https?:\/\/[^\s"'<>]+/i);
-      let domainMatch = userPrompt.match(/\b([a-zA-Z0-9-]+(?:\.[a-zA-Z]{2,})+)\b/i);
-      let targetUrl = urlMatch ? urlMatch[0] : '';
-
-      if (!targetUrl && domainMatch && !/gmail\.com|yahoo\.com|outlook\.com/i.test(domainMatch[0])) {
-        targetUrl = 'https://' + domainMatch[0];
+      if (!browserlessKey) {
+        return { report: '\n[SYSTEM ALERT: BROWSERLESS_API_KEY is missing in Vercel Environment Variables.]\n', screenshot: null };
       }
 
-      if (!targetUrl) {
-        if (/facebook|fb/i.test(userPrompt)) targetUrl = 'https://www.facebook.' + 'com/r.php';
-        else if (/microsoft|outlook|hotmail/i.test(userPrompt)) targetUrl = 'https://signup.live.' + 'com';
-        else if (/github/i.test(userPrompt)) targetUrl = 'https://github.' + 'com/signup';
-        else if (/reddit/i.test(userPrompt)) targetUrl = 'https://www.reddit.' + 'com/register';
-        else if (/instagram/i.test(userPrompt)) targetUrl = 'https://www.instagram.' + 'com/accounts/emailsignup/';
-        else if (/twitter|x\.com/i.test(userPrompt)) targetUrl = 'https://x.' + 'com/i/flow/signup';
-        else if (/discord/i.test(userPrompt)) targetUrl = 'https://discord.' + 'com/register';
-      }
-
-      const isBrowserIntent = Boolean(targetUrl) || /website|site|browse|visit|open|account|register|sign up|signup|fill|form|create|submit|login|khule|kule|screenshot|ss|scrape|read page/i.test(userPrompt);
+      const targetUrl = await resolveTargetUrlWithAI(userPrompt);
+      const isBrowserIntent = Boolean(targetUrl) || /website|site|browse|visit|open|account|register|sign up|signup|fill|form|create|submit|login|khule|kule|screenshot|ss|scrape|ঢুকে|খুলে|একাউন্ট|অ্যাকাউন্ট/i.test(userPrompt);
+      
       if (!isBrowserIntent) return null;
 
       if (!targetUrl) {
         return {
-          report: `\n[HEADLESS CHROME AGENT READY]: Headless browser is active and ready. Ask the user which specific website name or URL (e.g., github.com, reddit.com, or any URL) they want you to open, create an account on, fill forms, or take a screenshot of.\n`,
+          report: `\n[HEADLESS CHROME AGENT READY]: Headless browser is active. Tell the user in their language to mention the name or link of any website (e.g. "Canva te account khule dao" or "github.com") so you can open it immediately.\n`,
           screenshot: null
         };
       }
 
-      const isFormAction = /account|register|sign up|signup|fill|form|create|submit|login|khule|kule/i.test(userPrompt);
+      const isFormAction = /account|register|sign up|signup|fill|form|create|submit|login|khule|kule|খুলে|একাউন্ট|অ্যাকাউন্ট|ফর্ম/i.test(userPrompt);
       const emailMatch = userPrompt.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
       const passMatch = userPrompt.match(/pass(?:word)?[:=\s]+([^\s]+)/i);
 
-      const safeEmail = emailMatch ? emailMatch[0] : (body.vaultEmail || `sadim.auto${Math.floor(100 + Math.random() * 899)}@gmail.com`);
-      const safePass = passMatch ? passMatch[1] : (body.vaultPass || 'Satyexa#2026!');
+      const safeEmail = emailMatch ? emailMatch.at(0) : (body.vaultEmail || `sadim.auto${Math.floor(100 + Math.random() * 899)}@gmail.com`);
+      const safePass = passMatch ? passMatch.at(1) : (body.vaultPass || 'Satyexa#2026!');
       const safeFullName = body.vaultName || 'Sadim Molla';
-      const usernameToUse = safeEmail.split('@')[0].replace(/[^a-zA-Z0-9]/g, '') + Math.floor(10 + Math.random() * 89);
+      const usernameToUse = safeEmail.split('@').at(0).replace(/[^a-zA-Z0-9]/g, '') + Math.floor(10 + Math.random() * 89);
 
       try {
         const endpoint = 'https://chrome.browserless.' + 'io/function?token=' + browserlessKey;
@@ -156,8 +186,8 @@ export default async function handler(req, res) {
                   else if (attr.includes('email')) { inp.value = email; }
                   else if (attr.includes('pass')) { inp.value = password; }
                   else if (attr.includes('user')) { inp.value = usernameToUse; }
-                  else if (attr.includes('first')) { inp.value = nameParts[0] || 'Sadim'; }
-                  else if (attr.includes('last')) { inp.value = nameParts[1] || 'Molla'; }
+                  else if (attr.includes('first')) { inp.value = nameParts.at(0) || 'Sadim'; }
+                  else if (attr.includes('last')) { inp.value = nameParts.at(1) || 'Molla'; }
                   else if (attr.includes('name')) { inp.value = fullName; }
                   else if (attr.includes('phone') || attr.includes('mobile')) { inp.value = '01700000000'; }
                   inp.dispatchEvent(new Event('input', { bubbles: true }));
@@ -188,7 +218,10 @@ export default async function handler(req, res) {
           body: script
         }, 28000);
 
-        if (!r.ok) return { report: `\n[HEADLESS AGENT ERROR]: Browserless returned status ${r.status}.\n`, screenshot: null };
+        if (!r.ok) {
+          const errTxt = await r.text().catch(() => '');
+          return { report: `\n[HEADLESS AGENT ERROR]: Browserless HTTP ${r.status} - ${errTxt.slice(0, 200)}\n`, screenshot: null };
+        }
         const json = await r.json();
         return {
           report: `\n[HEADLESS CHROME AGENT EXECUTION REPORT]:\nTarget URL: ${targetUrl}\nFinal URL: ${json.data?.finalUrl}\nPage Title: ${json.data?.title}\nForm Auto-Filled & Submitted: ${json.data?.formFilled}\nGenerated Credentials: Email=${json.data?.email}, Username=${json.data?.username}, Password=${safePass}\nExtracted Page Content:\n${json.data?.content}\n`,
@@ -201,11 +234,11 @@ export default async function handler(req, res) {
 
     const headlessResult = await runHeadlessAgent(prompt);
     const headlessReport = headlessResult ? headlessResult.report : '';
-        let systemPrompt = body.customPersona || `You are Satyexa AI (APEX-GOD-MODE), an advanced autonomous AI system with a built-in Headless Chrome Browser Agent, Vision/PDF/Video Multimodal Engine, and Live Market Feed.
-CRITICAL CAPABILITY RULES:
-- You CAN browse any website, auto-fill signup/login forms, create accounts, read live webpage data, and capture screenshots using your integrated Headless Chrome Agent.
-- NEVER say "I cannot open websites" or "I cannot create accounts". Always use the [HEADLESS CHROME AGENT EXECUTION REPORT] data if present, or ask the user for the target website name/URL if they didn't specify one.
-- You CAN analyze uploaded images, videos, and PDF documents directly.`;
+              let systemPrompt = body.customPersona || `You are Satyexa AI (APEX-GOD-MODE), an autonomous AI system with a built-in Headless Chrome Browser Agent, Multimodal Vision (Image/Video/PDF), and Live Market Feed.
+CRITICAL RULES:
+- You DO have a real Headless Chrome Browser Agent. NEVER say "I cannot open websites" or "I cannot create accounts".
+- Always report the exact results from [HEADLESS CHROME AGENT EXECUTION REPORT] (including Final URL, Form Auto-Filled status, Generated Credentials, and Page Content). If [HEADLESS AGENT ERROR] or [SYSTEM ALERT] appears, show that exact error message to the user so they know why Browserless failed.
+- You CAN read and analyze uploaded images, videos, and PDF files directly.`;
 
     if (isTruthMode) {
       systemPrompt = `You are TRUTH-AI, a bold, opinionated, analytical and conversational AI with built-in Headless Browser & Multimodal Vision capabilities.
@@ -358,8 +391,8 @@ Be decisive, analytical, confident and honest.`;
 
       const parts = [{ text: `${systemPrompt}\n${liveMarketFeed}${headlessReport}\nUser: ${userText}` }];
       if (incomingImage && typeof incomingImage === 'string' && incomingImage.includes(',')) {
-        const mimeType = incomingImage.split(';')[0].replace('data:', '') || 'image/jpeg';
-        const base64Data = incomingImage.split(',')[1];
+        const mimeType = incomingImage.split(';').at(0).replace('data:', '') || 'image/jpeg';
+        const base64Data = incomingImage.split(',').at(1);
         parts.push({ inlineData: { mimeType, data: base64Data } });
       }
 
@@ -493,4 +526,5 @@ Be decisive, analytical, confident and honest.`;
       reply: `⚠️ System Notice: ${err.message}`
     });
   }
-                                       }
+        }
+      
