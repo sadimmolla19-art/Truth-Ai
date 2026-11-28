@@ -1232,215 +1232,170 @@ setInterval(function() {
   }, 500);
 })();
     </script>
-  <!-- SATYEXA CHARACTER SWITCHER BUTTON ONLY -->
-<script>
-(function() {
-  window.satyexaTruthMode = false;
+export default async function handler(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  function injectCharacterButton() {
-    const webBtn = Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes('Web:'));
-    if (webBtn && !document.getElementById('truthCharToggleBtn')) {
-      const charBtn = document.createElement('button');
-      charBtn.id = 'truthCharToggleBtn';
-      charBtn.type = 'button';
-      charBtn.style.cssText = 'background:#1e293b; color:#38bdf8; border:1px solid #334155; padding:4px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; margin-right:6px; transition:0.2s;';
-      charBtn.innerText = '⚡ Mode: APEX';
-      charBtn.onclick = function() {
-        window.satyexaTruthMode = !window.satyexaTruthMode;
-        if (window.satyexaTruthMode) {
-          charBtn.innerText = '🔥 Mode: TRUTH-AI';
-          charBtn.style.background = '#7f1d1d';
-          charBtn.style.color = '#fca5a5';
-          charBtn.style.borderColor = '#ef4444';
-        } else {
-          charBtn.innerText = '⚡ Mode: APEX';
-          charBtn.style.background = '#1e293b';
-          charBtn.style.color = '#38bdf8';
-          charBtn.style.borderColor = '#334155';
-        }
-      };
-      webBtn.parentNode.insertBefore(charBtn, webBtn);
-    }
-  }
-
-  injectCharacterButton();
-  setInterval(injectCharacterButton, 1000);
-
-  // 1. Deploy Studio Syntax Error Fix
   try {
-    const res = await fetch('/api/deployer', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-    });
-    const data = await res.json();
-    if (data.success) {
-      status.style.color = '#34d399';
-      status.innerText = '✅ ' + data.message + (data.liveUrl ? ' Live URL: ' + data.liveUrl : '');
-    } else {
-      status.style.color = '#f87171';
-      status.innerText = '❌ ' + (data.error || 'Deployment failed');
-    }
-  } catch (e) { 
-    status.style.color = '#f87171'; 
-    status.innerText = '❌ Network Error: ' + e.message; 
-  }
-  btn.disabled = false; 
-  btn.innerText = '🚀 Execute & Deploy';
-}
-</script>
+    const { mode, password, platform, action, fileData, userConfig, customRequest } = req.body;
 
-<!-- 2. UNIFIED VISION, PDF, VIDEO, IMAGE STUDIO & HEADLESS BROWSER PATCH -->
-<script>
-(function() {
-  window.attachedFilePayload = null;
-
-  // A. Fix File Upload (Supports Image, PDF, Video, Text/Code)
-  window.handleImageUpload = function(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    // Vercel 4.5MB limit check
-    if (file.size > 4.2 * 1024 * 1024) {
-      alert('⚠️ ফাইল সাইজ ৪ MB-এর বেশি! দয়া করে ছোট ফাইল আপলোড করুন।');
-      e.target.value = '';
-      return;
+    // 1. Admin Mode Security Check
+    if (mode === 'admin') {
+      const adminPass = process.env.ADMIN_DEPLOY_PASSWORD || 'sadim19';
+      if (password !== adminPass) {
+        return res.status(401).json({ error: '❌ Invalid Admin Password!' });
+      }
     }
 
-    const reader = new FileReader();
-    reader.onload = function() {
-      const base64Result = reader.result;
-      window.attachedImage = base64Result;
-      window.attachedFilePayload = {
-        data: base64Result,
-        name: file.name,
-        type: file.type || 'application/octet-stream'
+    const ghToken = mode === 'admin' ? process.env.GITHUB_TOKEN : userConfig?.ghToken;
+    const ghOwner = mode === 'admin' ? (process.env.GITHUB_OWNER || 'sadimmolla19-art') : userConfig?.ghOwner;
+    const ghRepo = mode === 'admin' ? (process.env.GITHUB_REPO || 'Truth-Ai') : userConfig?.ghRepo;
+    const geminiKey = process.env.GEMINI_API_KEY;
+
+    // 2. GITHUB OPERATIONS (Safe Patch, Smart Inject, Full File)
+    if (platform === 'github') {
+      if (!ghToken || !ghOwner || !ghRepo) {
+        return res.status(400).json({ error: 'Missing GitHub Token, Owner, or Repo!' });
+      }
+
+      const filePath = fileData.path || 'index.html';
+      const apiUrl = `https://github.com{ghOwner}/${ghRepo}/contents/${filePath}`;
+      const headers = {
+        Authorization: `Bearer ${ghToken}`,
+        Accept: 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json'
       };
 
-      const previewBox = document.getElementById('previewBox');
-      const previewImg = document.getElementById('previewImg');
-      const labelSpan = previewBox.querySelector('span');
-
-      if (file.type.startsWith('image/')) {
-        previewImg.src = base64Result;
-        previewImg.style.display = 'block';
-        if (labelSpan) labelSpan.innerText = '🖼️ Image attached: ' + file.name;
-      } else {
-        previewImg.style.display = 'none';
-        if (labelSpan) labelSpan.innerText = '📎 File attached (' + file.name + ') - Ready to analyze!';
+      // Fetch existing file first
+      let existingContent = '';
+      let fileSha = null;
+      const getRes = await fetch(apiUrl, { headers });
+      if (getRes.ok) {
+        const getData = await getRes.json();
+        fileSha = getData.sha;
+        existingContent = Buffer.from(getData.content, 'base64').toString('utf-8');
       }
-      previewBox.classList.remove('hidden');
-    };
-    reader.readAsDataURL(file);
-    e.target.value = ''; // Reset input so same file can be re-uploaded
-  };
 
-  const origRemove = window.removeImage;
-  window.removeImage = function() {
-    window.attachedFilePayload = null;
-    if (origRemove) origRemove();
-  };
+      let finalContent = fileData.content || '';
 
-  // B. Fix 8K Image Studio (Reliable Generation + Fallback)
-  window.generateArt = function() {
-    const promptEl = document.getElementById('imgPrompt');
-    const prompt = promptEl ? promptEl.value.trim() : '';
-    if (!prompt) {
-      alert('⚠️ দয়া করে ছবির বর্ণনা (Prompt) লিখুন!');
-      if (promptEl) promptEl.focus();
-      return;
+      // A. SAFE AI SMART-PATCH (Search & Replace - Never deletes whole file!)
+      if (action === 'ai_edit') {
+        if (!existingContent) return res.status(404).json({ error: 'Target file not found on GitHub!' });
+        if (!geminiKey) return res.status(400).json({ error: 'GEMINI_API_KEY missing on server!' });
+
+        const prompt = `You are a surgical code editor. The user wants to modify the file "${filePath}".
+User Instruction: "${fileData.instruction}"
+${fileData.content ? `Reference Code Provided by User:\n${fileData.content}\n` : ''}
+
+CRITICAL RULES:
+1. Do NOT rewrite the entire file.
+2. Find the EXACT existing code block in the file that needs to be changed or removed, and provide its replacement.
+3. Return ONLY valid JSON in this exact format:
+{"find": "exact substring from existing file", "replace": "new code to replace it with"}
+
+Existing File Content:
+${existingContent}`;
+
+        const aiRes = await fetch(`https://googleapis.com{geminiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: 'application/json' }
+          })
+        });
+
+        const aiData = await aiRes.json();
+        const rawText = aiData?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!rawText) return res.status(500).json({ error: 'AI failed to generate patch.' });
+
+        const patch = JSON.parse(rawText);
+        if (!patch.find || !existingContent.includes(patch.find)) {
+          return res.status(400).json({
+            error: '⚠️ Safe-Guard Triggered: AI could not match exact lines to replace. Zero lines deleted! Use Manual Paste or clarify instruction.'
+          });
+        }
+
+        finalContent = existingContent.replace(patch.find, patch.replace);
+      }
+
+      // B. SMART AUTO-INJECT (Appends code safely without deleting old code)
+      else if (action === 'smart_inject') {
+        if (!existingContent) {
+          finalContent = fileData.content;
+        } else if (existingContent.includes('</body>')) {
+          finalContent = existingContent.replace('</body>', `\n${fileData.content}\n</body>`);
+        } else {
+          finalContent = existingContent + '\n' + fileData.content;
+        }
+      }
+
+      // Push updated content to GitHub
+      const putBody = {
+        message: `Satyexa Studio: ${action} on ${filePath}`,
+        content: Buffer.from(finalContent, 'utf-8').toString('base64')
+      };
+      if (fileSha) putBody.sha = fileSha;
+
+      const putRes = await fetch(apiUrl, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(putBody)
+      });
+      const putData = await putRes.json();
+
+      if (!putRes.ok) return res.status(putRes.status).json({ error: putData.message || 'GitHub Push Failed' });
+      return res.status(200).json({ success: true, message: `Safely updated ${filePath} on GitHub!` });
     }
-    const resDiv = document.getElementById('imageResult');
-    const seed = Math.floor(Math.random() * 999999);
-    const url = 'https://pollinations.ai' + encodeURIComponent(prompt) + '?width=1024&height=1024&seed=' + seed + '&nologo=true&model=flux';
 
-    resDiv.innerHTML = '<p class="small" style="color:#38bdf8;">⏳ 8K Ultra HD আর্টওয়ার্ক তৈরি হচ্ছে, অনুগ্রহ করে ৫-১০ সেকেন্ড অপেক্ষা করুন...</p>';
+    // 3. VERCEL INSTANT DEPLOYMENT
+    if (platform === 'vercel') {
+      const vToken = mode === 'admin' ? process.env.VERCEL_TOKEN : userConfig?.vercelToken;
+      if (!vToken) return res.status(400).json({ error: 'Vercel Token missing!' });
 
-    const img = new Image();
-    img.onload = function() {
-      resDiv.innerHTML = '';
-      resDiv.appendChild(img);
-      resDiv.insertAdjacentHTML('beforeend',
-        '<a href="' + url + '" download="satyexa-8k-art.jpg" target="_blank">' +
-        '<button class="btn-full" style="margin-top:10px;">⬇ Download 8K HD Image</button></a>'
-      );
-    };
-    img.onerror = function() {
-      resDiv.innerHTML = '<p class="small" style="color:#f87171;">⚠️ ইমেজ সার্ভার ব্যস্ত আছে। আবার চেষ্টা করুন।</p>';
-    };
-    img.src = url;
-  };
-
-  // C. Fix Headless Browser Modal -> Route directly to /api/chat Headless Agent
-  window._runHeadlessBrowser = async function() {
-    const url = document.getElementById('stx-hl-url').value.trim();
-    const email = document.getElementById('stx-hl-email').value.trim();
-    const pass = document.getElementById('stx-hl-pass').value.trim() || ('Satyexa@' + Math.random().toString(36).slice(-6).toUpperCase() + '9');
-    const out = document.getElementById('stx-hl-out');
-    const btn = document.getElementById('stx-hl-btn');
-
-    if (!url) { out.innerText = '⚠️ অনুগ্রহ করে ওয়েবসাইটের URL দিন!'; return; }
-
-    btn.disabled = true;
-    btn.innerText = '⏳ Running Headless Chrome...';
-    out.innerText = '🌐 Headless Chrome চালু হচ্ছে এবং ওয়েবসাইটে প্রবেশ করছে...';
-
-    try {
-      const commandText = email
-        ? `Open website ${url} in headless browser, create account and fill-up signup form using email: ${email} and password: ${pass}, and capture screenshot.`
-        : `Open website ${url} in headless browser, read data and capture screenshot.`;
-
-      const res = await fetch('/api/chat', {
+      const vRes = await fetch('https://vercel.com', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { Authorization: `Bearer ${vToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: [{ role: 'user', text: commandText }],
-          webSearch: true,
-          vaultEmail: email,
-          vaultPass: pass,
-          model: 'gemini-4-neon'
+          name: fileData.projectName || 'satyexa-app',
+          files: [{ file: fileData.path || 'index.html', data: fileData.content }],
+          projectSettings: { framework: null }
         })
       });
-      const data = await res.json();
-      out.innerText = data.reply || data.error || '✅ Execution completed.';
-    } catch (e) {
-      out.innerText = '❌ Error: ' + e.message;
+      const vData = await vRes.json();
+      if (!vRes.ok) return res.status(vRes.status).json({ error: vData.error?.message || 'Vercel Deploy Failed' });
+      return res.status(200).json({ success: true, message: 'Deployed to Vercel!', liveUrl: 'https://' + vData.url });
     }
-    btn.disabled = false;
-    btn.innerText = '🚀 Launch Headless Browser & Register';
-  };
 
-  // D. Intercept /api/chat to attach File/PDF/Video + TruthMode + Vault
-  const masterFetch = window.fetch;
-  window.fetch = async function(resource, config) {
-    if (typeof resource === 'string' && resource.includes('/api/chat') && config && config.body) {
-      try {
-        const bodyObj = JSON.parse(config.body);
+    // 4. CLOUDFLARE WORKER DEPLOYMENT
+    if (platform === 'cloudflare') {
+      const cfToken = mode === 'admin' ? process.env.CF_API_TOKEN : userConfig?.cfToken;
+      const cfAccount = mode === 'admin' ? process.env.CF_ACCOUNT_ID : userConfig?.cfAccountId;
+      if (!cfToken || !cfAccount) return res.status(400).json({ error: 'Cloudflare Token or Account ID missing!' });
 
-        // Attach fileData (PDF, Video, Image) properly
-        if (window.attachedFilePayload) {
-          bodyObj.imageBase64 = window.attachedFilePayload.data;
-          bodyObj.fileData = window.attachedFilePayload.data;
-          bodyObj.fileName = window.attachedFilePayload.name;
-          bodyObj.mimeType = window.attachedFilePayload.type;
-        }
-
-        // Auto-enable Web Search if URL or browser action is detected
-        const lastText = (bodyObj.messages && bodyObj.messages.length) ? (bodyObj.messages[bodyObj.messages.length - 1].text || '') : '';
-        if (/http|www\.|\.com|\.net|\.org|screenshot|website|account|signup|register|headless/i.test(lastText)) {
-          bodyObj.webSearch = true;
-        }
-
-        bodyObj.truthMode = !!window.satyexaTruthMode;
-        bodyObj.vaultEmail = localStorage.getItem('satyexa_vault_email') || '';
-        bodyObj.vaultName = localStorage.getItem('satyexa_vault_name') || 'Sadim Molla';
-        bodyObj.vaultPass = localStorage.getItem('satyexa_vault_pass') || 'Satyexa@2026!';
-
-        config.body = JSON.stringify(bodyObj);
-      } catch (err) {}
+      const cfRes = await fetch(`https://cloudflare.com{cfAccount}/workers/scripts/${fileData.workerName || 'satyexa-worker'}`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${cfToken}`, 'Content-Type': 'application/javascript' },
+        body: fileData.content
+      });
+      const cfData = await cfRes.json();
+      if (!cfData.success) return res.status(400).json({ error: cfData.errors?.[0]?.message || 'Cloudflare Deploy Failed' });
+      return res.status(200).json({ success: true, message: 'Cloudflare Worker Deployed!' });
     }
-    return masterFetch.apply(this, arguments);
-  };
-})();
-</script>
-</body>
-</html>
 
+    // 5. UNIVERSAL CUSTOM API (Any App / IDE / Hosting)
+    if (platform === 'universal' && customRequest?.endpointUrl) {
+      const uRes = await fetch(customRequest.endpointUrl, {
+        method: customRequest.method || 'POST',
+        headers: { 'Content-Type': 'application/json', ...(customRequest.headers || {}) },
+        body: typeof customRequest.payload === 'string' ? customRequest.payload : JSON.stringify(customRequest.payload)
+      });
+      const uText = await uRes.text();
+      return res.status(200).json({ success: uRes.ok, message: `Universal API Response (${uRes.status}): ${uText.slice(0, 150)}` });
+    }
+
+    return res.status(400).json({ error: 'Unsupported platform selected.' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Server Error: ' + err.message });
+  }
+}
+  
